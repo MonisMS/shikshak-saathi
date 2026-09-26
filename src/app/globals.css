@@ -132,6 +132,12 @@
   }
 }
 
+/* Class Notes: Wispr-style serif headings (fonts loaded in src/app/(app)/notes/layout.tsx). */
+.note-serif {
+  font-family: var(--font-note-serif), var(--font-note-serif-deva), Georgia, serif;
+  font-weight: 400;
+}
+
 /* §12.1 — browser-print export (F24/F26): A4 page box + explicit page breaks between docs. */
 @media print {
   @page {
