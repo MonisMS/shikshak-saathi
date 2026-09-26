@@ -17,6 +17,7 @@ export const config = {
     "/classrooms/:path*",
     "/library/:path*",
     "/kits/:path*",
+    "/notes/:path*",
     "/schedule/:path*",
     "/settings/:path*",
     "/onboarding/:path*",

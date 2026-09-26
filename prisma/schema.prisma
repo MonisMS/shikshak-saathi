@@ -105,6 +105,7 @@ model User {
   activityLogs     ActivityLog[]
   uploadedChapters Chapter[]       @relation("ChapterUploader")
   generationLogs   GenerationLog[]
+  classNotes       ClassNote[]
 
   @@map("user")
 }
@@ -428,6 +429,25 @@ model GenerationLog {
   error        String?
   fromCache    Boolean      @default(false)
   createdAt    DateTime     @default(now())
+
+  @@index([teacherId, createdAt])
+}
+
+/// Wispr-style class/meeting note: audio (or pasted text) → transcript → AI summary.
+model ClassNote {
+  id              String   @id @default(cuid())
+  teacherId       String
+  teacher         User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  title           String
+  source          String // "record" | "upload" | "text"
+  audioSeconds    Int?
+  summaryLanguage String   @default("auto") // "auto" | "hi" | "en"
+  transcript      String
+  summary         Json? // zod NoteSummary: { title, overview, sections[{heading, bullets[]}], actionItems[] }
+  summaryError    String?
+  myNotes         String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([teacherId, createdAt])
 }
