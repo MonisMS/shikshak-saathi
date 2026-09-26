@@ -5,5 +5,6 @@ export const NAV_LINKS = [
   { href: "/dashboard", label: { en: "Dashboard", hi: "डैशबोर्ड" } },
   { href: "/kits/new", label: { en: "New lesson kit", hi: "नई किट" } },
   { href: "/kits", label: { en: "My kits", hi: "मेरी किट्स" } },
+  { href: "/notes", label: { en: "Class notes", hi: "कक्षा नोट्स" } },
   { href: "/settings", label: { en: "Settings", hi: "सेटिंग्स" } },
 ] as const;
