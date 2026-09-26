@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { WifiOff, Download, Check } from "lucide-react";
+import { WifiOff, Download, Check, MonitorSmartphone } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 const TITLES_KEY = "ss-offline-kits";
@@ -93,5 +94,73 @@ export function SaveOfflineButton({ kitId, title }: { kitId: string; title: stri
       {state === "saved" ? <Check className="size-4" /> : <Download className="size-4" />}
       {state === "saved" ? "Saved offline" : state === "saving" ? "Saving…" : "Save for offline"}
     </Button>
+  );
+}
+
+// Chrome fires beforeinstallprompt once, often before React mounts — capture it at module load.
+type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+let deferredPrompt: InstallPromptEvent | null = null;
+const installListeners = new Set<() => void>();
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e as InstallPromptEvent;
+    installListeners.forEach((l) => l());
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    installListeners.forEach((l) => l());
+  });
+}
+
+function subscribeInstall(cb: () => void) {
+  installListeners.add(cb);
+  const mq = window.matchMedia("(display-mode: standalone)");
+  mq.addEventListener("change", cb);
+  return () => {
+    installListeners.delete(cb);
+    mq.removeEventListener("change", cb);
+  };
+}
+
+function installState(): "installed" | "ready" | "unavailable" {
+  if (window.matchMedia("(display-mode: standalone)").matches) return "installed";
+  return deferredPrompt ? "ready" : "unavailable";
+}
+
+/** Top-bar "Install app" button — makes the PWA feature visible for the demo. */
+export function InstallAppButton() {
+  const state = useSyncExternalStore(subscribeInstall, installState, () => "unavailable" as const);
+
+  if (state === "installed") {
+    return (
+      <span className="hidden h-11 items-center gap-1.5 rounded-full bg-muted px-4 text-sm text-primary sm:flex">
+        <Check className="size-4" aria-hidden /> App installed
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        if (!deferredPrompt) {
+          toast.info("Install Shikshak Saathi", {
+            description:
+              "Chrome: click the install icon in the address bar, or menu → Cast, save and share → Install. Phone: menu → Add to Home screen.",
+          });
+          return;
+        }
+        await deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        installListeners.forEach((l) => l());
+      }}
+      className="flex h-11 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+      aria-label="Install app"
+    >
+      <MonitorSmartphone className="size-4" aria-hidden />
+      <span className="hidden sm:inline">Install app</span>
+    </button>
   );
 }
