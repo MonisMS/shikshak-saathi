@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { LayoutDashboard, PlusCircle, BookOpen, NotebookPen, ClipboardCheck, Settings, LogOut, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
+import { clearOfflineKits } from "@/components/pwa/pwa";
 import { NAV_LINKS } from "./nav-links";
 import { useLanguage } from "./language-provider";
 
@@ -42,6 +43,7 @@ export function AppSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { lang } = useLanguage();
 
   async function logout() {
+    clearOfflineKits();
     await authClient.signOut();
     router.push("/login");
     router.refresh();
