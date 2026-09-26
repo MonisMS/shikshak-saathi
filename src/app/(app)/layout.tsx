@@ -1,9 +1,12 @@
+import { redirect } from "next/navigation";
 import { AppSidebarNav } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
+import { requireTeacher } from "@/lib/session";
 
-// TODO(Ujjwal, P1.3): wrap with requireTeacher() and redirect to /onboarding
-// when the session's onboarded flag is false, once src/lib/session.ts exists.
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const teacher = await requireTeacher();
+  if (!teacher.onboarded) redirect("/onboarding");
+
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-60 shrink-0 border-r border-sidebar-border bg-sidebar md:block print:hidden">
