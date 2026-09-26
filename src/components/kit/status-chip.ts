@@ -1,11 +1,11 @@
 /** Shared kit status → chip mapping (dashboard + My kits list), F06/F51.
  * "Results in" isn't a DB status — it's derived from whether a QuizSession exists. */
 export const STATUS_CHIP: Record<string, { label: string; className: string }> = {
-  DRAFT: { label: "Draft", className: "bg-muted text-muted-foreground" },
-  GENERATING: { label: "Generating", className: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300" },
-  READY: { label: "Ready", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
-  FAILED: { label: "Failed", className: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300" },
-  RESULTS_IN: { label: "Results in", className: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
+  DRAFT: { label: "Draft", className: "border border-border bg-muted text-muted-foreground" },
+  GENERATING: { label: "Generating", className: "border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-300" },
+  READY: { label: "Ready", className: "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300" },
+  FAILED: { label: "Failed", className: "border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300" },
+  RESULTS_IN: { label: "Results in", className: "border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300" },
 };
 
 export function statusChipKey(status: string, hasResults: boolean): string {

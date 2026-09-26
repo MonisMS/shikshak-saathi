@@ -166,7 +166,7 @@ export function NewKitForm({
         <MicButton onIntent={handleVoiceIntent} />
       </FadeIn>
 
-      <FadeIn index={1} className="space-y-3 rounded-xl border border-border/70 bg-card p-4 md:p-5">
+      <FadeIn index={1} className="space-y-3 rounded-3xl bg-card p-5 ring-1 ring-foreground/[0.04] md:p-6">
         <StepHeading step={1} title="What are you teaching?" />
         <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v as "chapter" | "topic")}>
           <TabsList>
@@ -178,7 +178,7 @@ export function NewKitForm({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label>Class</Label>
-                <Select value={grade ? String(grade) : undefined} onValueChange={(v) => { setGrade(v ? Number(v) : undefined); setSubject(undefined); setChapterId(undefined); }}>
+                <Select items={grades.map((g) => ({ value: String(g), label: `Class ${g}` }))} value={grade ? String(grade) : undefined} onValueChange={(v) => { setGrade(v ? Number(v) : undefined); setSubject(undefined); setChapterId(undefined); }}>
                   <SelectTrigger className="h-11"><SelectValue placeholder="Class" /></SelectTrigger>
                   <SelectContent>
                     {grades.map((g) => (
@@ -200,7 +200,7 @@ export function NewKitForm({
               </div>
               <div className="space-y-1.5">
                 <Label>Chapter</Label>
-                <Select value={chapterId} onValueChange={(v) => setChapterId(v ?? undefined)}>
+                <Select items={chaptersForSubject.map((c) => ({ value: c.id, label: `Ch ${c.chapterNo}: ${language === "hi" && c.titleHi ? c.titleHi : c.titleEn}` }))} value={chapterId} onValueChange={(v) => setChapterId(v ?? undefined)}>
                   <SelectTrigger className="h-11"><SelectValue placeholder="Chapter" /></SelectTrigger>
                   <SelectContent>
                     {chaptersForSubject.map((c) => (
@@ -233,12 +233,12 @@ export function NewKitForm({
         </Tabs>
       </FadeIn>
 
-      <FadeIn index={2} className="space-y-4 rounded-xl border border-border/70 bg-card p-4 md:p-5">
+      <FadeIn index={2} className="space-y-4 rounded-3xl bg-card p-5 ring-1 ring-foreground/[0.04] md:p-6">
         <StepHeading step={2} title="Class context" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Classroom</Label>
-            <Select value={classroomId} onValueChange={(v) => setClassroomId(v ?? undefined)}>
+            <Select items={classrooms.map((c) => ({ value: c.id, label: c.name }))} value={classroomId} onValueChange={(v) => setClassroomId(v ?? undefined)}>
               <SelectTrigger className="h-11"><SelectValue placeholder="Classroom" /></SelectTrigger>
               <SelectContent>
                 {classrooms.map((c) => (
@@ -261,7 +261,7 @@ export function NewKitForm({
           </div>
           <div className="space-y-1.5">
             <Label>Content language</Label>
-            <Select value={language} onValueChange={(v) => setLanguage(v as "hi" | "en")}>
+            <Select items={{ hi: "हिंदी (Hindi)", en: "English" }} value={language} onValueChange={(v) => setLanguage(v as "hi" | "en")}>
               <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="hi">हिंदी (Hindi)</SelectItem>
@@ -279,7 +279,7 @@ export function NewKitForm({
         </div>
       </FadeIn>
 
-      <FadeIn index={3} className="space-y-4 rounded-xl border border-border/70 bg-card p-4 md:p-5">
+      <FadeIn index={3} className="space-y-4 rounded-3xl bg-card p-5 ring-1 ring-foreground/[0.04] md:p-6">
         <StepHeading step={3} title="What should we generate?" />
         <div className="flex items-center gap-2">
           <Checkbox id="parent-note" checked={includeParentNote} onCheckedChange={(v) => setIncludeParentNote(v === true)} />

@@ -29,10 +29,18 @@ interface ClassroomOption {
 const STATUS_OPTIONS = ["DRAFT", "GENERATING", "READY", "FAILED", "RESULTS_IN"];
 
 /** F51: kit history with filters (classroom, status), search, duplicate, delete. */
-export function KitsListView({ initialKits, classrooms }: { initialKits: KitRow[]; classrooms: ClassroomOption[] }) {
+export function KitsListView({
+  initialKits,
+  classrooms,
+  initialSearch = "",
+}: {
+  initialKits: KitRow[];
+  classrooms: ClassroomOption[];
+  initialSearch?: string;
+}) {
   const router = useRouter();
   const [kits, setKits] = useState(initialKits);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [classroomFilter, setClassroomFilter] = useState<string | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -88,7 +96,7 @@ export function KitsListView({ initialKits, classrooms }: { initialKits: KitRow[
 
       <div className="flex flex-wrap items-center gap-2">
         <Input placeholder="Search kits…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        <Select value={classroomFilter} onValueChange={(v) => setClassroomFilter(v ?? undefined)}>
+        <Select items={classrooms.map((c) => ({ value: c.id, label: c.name }))} value={classroomFilter} onValueChange={(v) => setClassroomFilter(v ?? undefined)}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="All classrooms" />
           </SelectTrigger>
@@ -100,7 +108,7 @@ export function KitsListView({ initialKits, classrooms }: { initialKits: KitRow[
             ))}
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? undefined)}>
+        <Select items={STATUS_OPTIONS.map((s) => ({ value: s, label: STATUS_CHIP[s].label }))} value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? undefined)}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>

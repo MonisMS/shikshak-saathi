@@ -3,8 +3,10 @@ import { prisma } from "@/lib/db";
 import { KitsListView } from "@/components/kit/kits-list-view";
 
 /** F51: kit history with filters, search, duplicate, delete. */
-export default async function KitsPage() {
+export default async function KitsPage({ searchParams }: PageProps<"/kits">) {
   const teacher = await requireTeacher();
+  const q = (await searchParams).q;
+  const initialSearch = typeof q === "string" ? q : "";
 
   const [kits, classrooms] = await Promise.all([
     prisma.lessonKit.findMany({
@@ -30,5 +32,5 @@ export default async function KitsPage() {
     createdAt: k.createdAt.toISOString(),
   }));
 
-  return <KitsListView initialKits={rows} classrooms={classrooms} />;
+  return <KitsListView key={initialSearch} initialKits={rows} classrooms={classrooms} initialSearch={initialSearch} />;
 }

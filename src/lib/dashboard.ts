@@ -15,6 +15,22 @@ export async function getDashboardData(teacherId: string) {
   const endOfTomorrow = new Date(endOfToday);
   endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
 
+  const weekStart = new Date(startOfToday);
+  weekStart.setDate(weekStart.getDate() - 6);
+
+  const [weekKits, readyKits, kitsWithResults] = await Promise.all([
+    prisma.lessonKit.findMany({ where: { teacherId, createdAt: { gte: weekStart } }, select: { createdAt: true } }),
+    prisma.lessonKit.count({ where: { teacherId, status: "READY", quizSessions: { none: {} } } }),
+    prisma.lessonKit.count({ where: { teacherId, quizSessions: { some: {} } } }),
+  ]);
+  const kitsPerDay = Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(weekStart);
+    day.setDate(day.getDate() + i);
+    const next = new Date(day);
+    next.setDate(next.getDate() + 1);
+    return { date: day, count: weekKits.filter((k) => k.createdAt >= day && k.createdAt < next).length };
+  });
+
   const [totalKits, kitsThisWeek, sectionsGenerated, minutesSavedAgg, recentKits, todayTomorrowKits, pendingResultsKits, topMisconceptions] =
     await Promise.all([
       prisma.lessonKit.count({ where: { teacherId } }),
@@ -47,6 +63,9 @@ export async function getDashboardData(teacherId: string) {
     ]);
 
   return {
+    kitsPerDay,
+    readyKits,
+    kitsWithResults,
     totalKits,
     kitsThisWeek,
     sectionsGenerated,
