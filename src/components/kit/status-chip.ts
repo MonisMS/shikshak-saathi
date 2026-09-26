@@ -2,10 +2,10 @@
  * "Results in" isn't a DB status — it's derived from whether a QuizSession exists. */
 export const STATUS_CHIP: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Draft", className: "bg-muted text-muted-foreground" },
-  GENERATING: { label: "Generating", className: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" },
-  READY: { label: "Ready", className: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" },
-  FAILED: { label: "Failed", className: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300" },
-  RESULTS_IN: { label: "Results in", className: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300" },
+  GENERATING: { label: "Generating", className: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300" },
+  READY: { label: "Ready", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
+  FAILED: { label: "Failed", className: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300" },
+  RESULTS_IN: { label: "Results in", className: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
 };
 
 export function statusChipKey(status: string, hasResults: boolean): string {

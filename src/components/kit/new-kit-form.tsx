@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MicButton, type VoiceIntentResult } from "@/components/voice/mic-button";
+import { FadeIn } from "@/components/motion/fade-in";
 
 interface ChapterOption {
   id: string;
@@ -159,82 +160,86 @@ export function NewKitForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">New lesson kit</h1>
+    <form onSubmit={handleSubmit} className="max-w-2xl space-y-6 pb-10">
+      <FadeIn className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">New lesson kit</h1>
         <MicButton onIntent={handleVoiceIntent} />
-      </div>
+      </FadeIn>
 
-      <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v as "chapter" | "topic")}>
-        <TabsList>
-          <TabsTrigger value="chapter">Pick chapter</TabsTrigger>
-          <TabsTrigger value="topic">Type topic</TabsTrigger>
-        </TabsList>
+      <FadeIn index={1} className="space-y-3 rounded-xl border border-border/70 bg-card p-4 md:p-5">
+        <StepHeading step={1} title="What are you teaching?" />
+        <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v as "chapter" | "topic")}>
+          <TabsList>
+            <TabsTrigger value="chapter">Pick chapter</TabsTrigger>
+            <TabsTrigger value="topic">Type topic</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="chapter" className="space-y-4 pt-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label>Class</Label>
-              <Select value={grade ? String(grade) : undefined} onValueChange={(v) => { setGrade(v ? Number(v) : undefined); setSubject(undefined); setChapterId(undefined); }}>
-                <SelectTrigger><SelectValue placeholder="Class" /></SelectTrigger>
-                <SelectContent>
-                  {grades.map((g) => (
-                    <SelectItem key={g} value={String(g)}>Class {g}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <TabsContent value="chapter" className="space-y-4 pt-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label>Class</Label>
+                <Select value={grade ? String(grade) : undefined} onValueChange={(v) => { setGrade(v ? Number(v) : undefined); setSubject(undefined); setChapterId(undefined); }}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Class" /></SelectTrigger>
+                  <SelectContent>
+                    {grades.map((g) => (
+                      <SelectItem key={g} value={String(g)}>Class {g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Subject</Label>
+                <Select value={subject} onValueChange={(v) => { setSubject(v ?? undefined); setChapterId(undefined); }}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Subject" /></SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Chapter</Label>
+                <Select value={chapterId} onValueChange={(v) => setChapterId(v ?? undefined)}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Chapter" /></SelectTrigger>
+                  <SelectContent>
+                    {chaptersForSubject.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        Ch {c.chapterNo}: {language === "hi" && c.titleHi ? c.titleHi : c.titleEn}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label>Subject</Label>
-              <Select value={subject} onValueChange={(v) => { setSubject(v ?? undefined); setChapterId(undefined); }}>
-                <SelectTrigger><SelectValue placeholder="Subject" /></SelectTrigger>
-                <SelectContent>
-                  {subjects.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Chapter</Label>
-              <Select value={chapterId} onValueChange={(v) => setChapterId(v ?? undefined)}>
-                <SelectTrigger><SelectValue placeholder="Chapter" /></SelectTrigger>
-                <SelectContent>
-                  {chaptersForSubject.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      Ch {c.chapterNo}: {language === "hi" && c.titleHi ? c.titleHi : c.titleEn}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="topic" className="space-y-4 pt-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Class</Label>
-              <Input type="number" min={1} max={12} value={topicGrade} onChange={(e) => setTopicGrade(Number(e.target.value))} />
+          <TabsContent value="topic" className="space-y-4 pt-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Class</Label>
+                <Input className="h-11" type="number" min={1} max={12} value={topicGrade} onChange={(e) => setTopicGrade(Number(e.target.value))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Subject</Label>
+                <Input className="h-11" value={topicSubject} onChange={(e) => setTopicSubject(e.target.value)} placeholder="Science" />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label>Subject</Label>
-              <Input value={topicSubject} onChange={(e) => setTopicSubject(e.target.value)} placeholder="Science" />
+            <div className="space-y-1.5">
+              <Label>Topic / learning objective</Label>
+              <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Photosynthesis in green plants" maxLength={2000} />
             </div>
-          </div>
-          <div className="space-y-1">
-            <Label>Topic / learning objective</Label>
-            <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Photosynthesis in green plants" maxLength={2000} />
-          </div>
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </FadeIn>
 
-      <div className="space-y-4 rounded-md border p-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
+      <FadeIn index={2} className="space-y-4 rounded-xl border border-border/70 bg-card p-4 md:p-5">
+        <StepHeading step={2} title="Class context" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
             <Label>Classroom</Label>
             <Select value={classroomId} onValueChange={(v) => setClassroomId(v ?? undefined)}>
-              <SelectTrigger><SelectValue placeholder="Classroom" /></SelectTrigger>
+              <SelectTrigger className="h-11"><SelectValue placeholder="Classroom" /></SelectTrigger>
               <SelectContent>
                 {classrooms.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -242,49 +247,66 @@ export function NewKitForm({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label>Date to teach</Label>
-            <Input type="date" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
+            <Input className="h-11" type="date" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label>Period length (minutes)</Label>
-            <Input type="number" min={20} max={90} value={periodMinutes} onChange={(e) => setPeriodMinutes(Number(e.target.value))} />
+            <Input className="h-11" type="number" min={20} max={90} value={periodMinutes} onChange={(e) => setPeriodMinutes(Number(e.target.value))} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label>Class size</Label>
-            <Input type="number" min={1} max={120} value={classSize} onChange={(e) => setClassSize(Number(e.target.value))} />
+            <Input className="h-11" type="number" min={1} max={120} value={classSize} onChange={(e) => setClassSize(Number(e.target.value))} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label>Content language</Label>
             <Select value={language} onValueChange={(v) => setLanguage(v as "hi" | "en")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="hi">हिंदी (Hindi)</SelectItem>
                 <SelectItem value="en">English</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-secondary/40 px-3 sm:col-span-2">
+            <Label htmlFor="low-resource" className="py-3 text-sm leading-snug">
+              Low-resource classroom
+              <span className="block font-normal text-muted-foreground">Blackboard + local objects only, no projector</span>
+            </Label>
+            <Switch id="low-resource" checked={lowResource} onCheckedChange={setLowResource} />
+          </div>
         </div>
+      </FadeIn>
 
-        <div className="flex items-center justify-between">
-          <Label htmlFor="low-resource">Low-resource classroom (blackboard + local objects only)</Label>
-          <Switch id="low-resource" checked={lowResource} onCheckedChange={setLowResource} />
-        </div>
-
+      <FadeIn index={3} className="space-y-4 rounded-xl border border-border/70 bg-card p-4 md:p-5">
+        <StepHeading step={3} title="What should we generate?" />
         <div className="flex items-center gap-2">
           <Checkbox id="parent-note" checked={includeParentNote} onCheckedChange={(v) => setIncludeParentNote(v === true)} />
           <Label htmlFor="parent-note">Include a parent note</Label>
         </div>
-
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <Label>Note to the AI (optional)</Label>
           <Textarea value={teacherNote} onChange={(e) => setTeacherNote(e.target.value)} maxLength={500} placeholder="Anything specific you want covered" />
         </div>
-      </div>
+      </FadeIn>
 
-      <Button type="submit" disabled={submitting}>
-        {submitting ? "Creating…" : "Generate kit"}
-      </Button>
+      <FadeIn index={4}>
+        <Button type="submit" size="lg" disabled={submitting} className="w-full sm:w-auto">
+          {submitting ? "Creating…" : "Generate kit"}
+        </Button>
+      </FadeIn>
     </form>
+  );
+}
+
+function StepHeading({ step, title }: { step: number; title: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+        {step}
+      </span>
+      <h2 className="text-sm font-semibold">{title}</h2>
+    </div>
   );
 }

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { ExportButtons } from "@/components/kit/export-buttons";
+import { ExitTicketShare } from "@/components/kit/exit-ticket-share";
 
 const DOC_LABEL: Record<DocKind, string> = {
   plan: "Teacher's lesson plan",
@@ -53,9 +54,9 @@ export default async function ExportPage(props: PageProps<"/kits/[id]/export">) 
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold">{kit.title} — Export</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{kit.title} — Export</h1>
 
-      <Card>
+      <Card className="border-border/70">
         <CardHeader>
           <CardTitle className="text-base">Documents</CardTitle>
         </CardHeader>
@@ -84,6 +85,15 @@ export default async function ExportPage(props: PageProps<"/kits/[id]/export">) 
           />
         )}
       </div>
+
+      <Card className="border-border/70">
+        <CardHeader>
+          <CardTitle className="text-base">Student exit ticket</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ExitTicketShare kitId={kit.id} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

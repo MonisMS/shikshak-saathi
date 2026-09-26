@@ -1,10 +1,12 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import { SectionType } from "@/generated/prisma/enums";
 import { Objectives, LessonPlan, Worksheet, Quiz, ParentNote } from "@/lib/ai/schemas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FadeIn } from "@/components/motion/fade-in";
 import { useKitGeneration, type KitForGeneration } from "./use-kit-generation";
 import { SectionStatusPill } from "./section-status-pill";
 import { RegenerateControl } from "./regenerate-control";
@@ -108,12 +110,12 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
       </div>
 
       <div className="min-w-0 space-y-6">
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        {ORDER.filter((type) => type in sections).map((type) => {
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        {ORDER.filter((type) => type in sections).map((type, index) => {
         const state = sections[type];
         const canEditOrRegenerate = state.status === "done";
         return (
-          <div key={type} className="space-y-2">
+          <FadeIn key={type} index={index} className="space-y-2">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium">{SECTION_TITLES[type]}</h2>
               <div className="flex items-center gap-2">
@@ -129,27 +131,35 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
               </div>
             </div>
 
-            {state.status === "writing" || state.status === "queued" || state.status === "checking" ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <Skeleton className="h-24 w-full" />
-                </CardContent>
-              </Card>
-            ) : state.status === "failed" ? (
-              <Card>
-                <CardContent className="pt-6 text-sm text-destructive">{state.error}</CardContent>
-              </Card>
-            ) : (
-              <SectionBody
-                type={type}
-                kitId={kit.id}
-                content={state.content}
-                planContent={planContent}
-                onSave={(content) => save(type, content)}
-                onRegenerate={async () => { await regenerate(type); }}
-              />
-            )}
-          </div>
+            <AnimatePresence mode="wait" initial={false}>
+              {state.status === "writing" || state.status === "queued" || state.status === "checking" ? (
+                <motion.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                  <Card className="border-border/70">
+                    <CardContent className="pt-6">
+                      <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ) : state.status === "failed" ? (
+                <motion.div key="failed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                  <Card className="border-border/70">
+                    <CardContent className="pt-6 text-sm text-destructive">{state.error}</CardContent>
+                  </Card>
+                </motion.div>
+              ) : (
+                <motion.div key="body" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+                  <SectionBody
+                    type={type}
+                    kitId={kit.id}
+                    content={state.content}
+                    planContent={planContent}
+                    onSave={(content) => save(type, content)}
+                    onRegenerate={async () => { await regenerate(type); }}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </FadeIn>
         );
         })}
       </div>

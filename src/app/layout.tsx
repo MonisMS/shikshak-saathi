@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans, Noto_Sans_Devanagari, Geist_Mono } from "next/font/google";
+import { MotionConfig } from "motion/react";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -30,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${notoSans.variable} ${notoSansDevanagari.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
+        <MotionConfig reducedMotion="user">{children}</MotionConfig>
         <Toaster />
       </body>
     </html>
