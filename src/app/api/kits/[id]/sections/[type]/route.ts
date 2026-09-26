@@ -10,13 +10,14 @@ import {
   SectionType,
   type Prisma,
 } from "@/generated/prisma/client";
-import { generateJSON } from "@/lib/ai/gemini";
+import { generateJSON, MODEL_FAST } from "@/lib/ai/gemini";
 import { SECTION_SCHEMAS, Objectives, LessonPlan } from "@/lib/ai/schemas";
 import { SECTION_DEPS } from "@/lib/ai/pipeline";
 import { buildObjectivesPrompt } from "@/lib/ai/prompts/objectives";
 import { buildLessonPlanPrompt } from "@/lib/ai/prompts/plan";
 import { buildWorksheetPrompt } from "@/lib/ai/prompts/worksheet";
 import { buildQuizPrompt } from "@/lib/ai/prompts/quiz";
+import { buildParentNotePrompt } from "@/lib/ai/prompts/parent";
 import type { PromptContext } from "@/lib/ai/prompts/context";
 
 /**
@@ -139,6 +140,9 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
           { instruction, repair },
         );
         break;
+      case SectionType.PARENT_NOTE:
+        built = buildParentNotePrompt(promptCtx, planContent(), { instruction, repair });
+        break;
       default:
         throw new Error(`No prompt builder yet for ${sectionType} (lands in a later task)`);
     }
@@ -148,6 +152,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
       schema,
       system: built.system,
       user: built.user,
+      // PARENT_NOTE is a short summary, not full generation — use the fast/cheap model (§7.2).
+      model: sectionType === SectionType.PARENT_NOTE ? MODEL_FAST : undefined,
       demoCache: kit.chapter ? { chapterId: kit.chapter.id, sectionType } : undefined,
     });
 

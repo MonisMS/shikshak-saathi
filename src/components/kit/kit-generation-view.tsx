@@ -1,7 +1,7 @@
 "use client";
 
 import { SectionType } from "@/generated/prisma/enums";
-import { Objectives, LessonPlan, Worksheet, Quiz } from "@/lib/ai/schemas";
+import { Objectives, LessonPlan, Worksheet, Quiz, ParentNote } from "@/lib/ai/schemas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +14,7 @@ import { ObjectivesCard } from "./objectives-card";
 import { LessonPlanCard } from "./lesson-plan-card";
 import { WorksheetCard } from "./worksheet-card";
 import { QuizCard } from "./quiz-card";
+import { ParentNoteCard } from "./parent-note-card";
 
 const SECTION_TITLES: Record<SectionType, string> = {
   OBJECTIVES: "Objectives",
@@ -44,12 +45,14 @@ const ORDER: SectionType[] = [
 
 function SectionBody({
   type,
+  kitId,
   content,
   planContent,
   onSave,
   onRegenerate,
 }: {
   type: SectionType;
+  kitId: string;
   content: unknown;
   planContent: unknown;
   onSave: (content: unknown) => Promise<void>;
@@ -84,8 +87,12 @@ function SectionBody({
         />
       );
     }
+    case SectionType.PARENT_NOTE: {
+      const parsed = ParentNote.safeParse(content);
+      return parsed.success ? <ParentNoteCard kitId={kitId} data={parsed.data} /> : null;
+    }
     default:
-      // BLACKBOARD/MULTIGRADE/SUMMATIVE/REMEDIAL/PARENT_NOTE cards land in later tasks (P8/P11/P12).
+      // BLACKBOARD/MULTIGRADE/SUMMATIVE/REMEDIAL cards land in later tasks (P11/P12).
       return <p className="text-sm text-muted-foreground">This section&apos;s card lands in a later task.</p>;
   }
 }
@@ -135,6 +142,7 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
             ) : (
               <SectionBody
                 type={type}
+                kitId={kit.id}
                 content={state.content}
                 planContent={planContent}
                 onSave={(content) => save(type, content)}
