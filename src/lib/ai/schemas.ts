@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { SectionType } from "@/generated/prisma/client";
+import { SectionType } from "@/generated/prisma/enums";
 
 export const Lang = z.enum(["en", "hi"]);
 export const Bloom = z.enum(["remember", "understand", "apply", "analyze", "evaluate", "create"]);

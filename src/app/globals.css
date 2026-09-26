@@ -128,3 +128,14 @@
     @apply font-sans;
   }
 }
+
+/* §12.1 — browser-print export (F24/F26): A4 page box + explicit page breaks between docs. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  .page-break {
+    break-before: page;
+  }
+}

@@ -3,7 +3,7 @@ import * as z from "zod";
 import { prisma } from "@/lib/db";
 import { requireTeacher } from "@/lib/session";
 import { getKitForTeacher } from "@/lib/scope";
-import { getChapterPromptText } from "@/lib/chapters";
+import { toPromptText, type ChapterPage } from "@/lib/chapters";
 import {
   RevisionSource,
   SectionStatus,
@@ -25,18 +25,17 @@ import type { PromptContext } from "@/lib/ai/prompts/context";
  * in parallel. The same endpoint handles "regenerate with an instruction" (F20) and
  * the one-shot validator repair round (§10.6) via the request body.
  *
- * ASSUMED CONTRACT for teammate-owned files not yet built (documented here so their
- * real implementation can match what this route calls):
- * - `requireTeacher()` (src/lib/session.ts, Ujjwal, P1.3): resolves to `{ id: string, ... }`
- *   for a logged-in teacher, or throws if there's no session.
- * - `getKitForTeacher(kitId, teacherId)` (src/lib/scope.ts, Ujjwal, P1.3): resolves to the
- *   kit WITH its `sections` relation loaded, or throws if the kit doesn't exist / isn't
- *   owned by this teacher (this route turns that throw into a 404).
- * - `getChapterPromptText(chapterId, pageFrom?, pageTo?)` (src/lib/chapters.ts, Ujjwal,
- *   P3.2): resolves to the page-tagged `[p.N] ...` chapter text, sliced to that page range.
+ * `requireTeacher()` (src/lib/session.ts) redirects to /login on no session — it is
+ * intentionally NOT wrapped in try/catch (see the comment at each call site).
+ * `getKitForTeacher()` (src/lib/scope.ts) throws a plain `NotFoundError` when the kit
+ * doesn't exist or isn't owned by this teacher; that IS safe to try/catch → 404.
  */
 
 export const maxDuration = 60;
+
+function sliceChapterPages(pages: ChapterPage[], pageFrom: number | null, pageTo: number | null): ChapterPage[] {
+  return pages.filter((p) => (pageFrom == null || p.page >= pageFrom) && (pageTo == null || p.page <= pageTo));
+}
 
 const bodySchema = z.object({
   instruction: z.string().max(500).optional(),
@@ -62,16 +61,16 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
   }
   const sectionType = type;
 
-  let teacherId: string;
-  try {
-    const teacher = await requireTeacher();
-    teacherId = teacher.id;
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // requireTeacher() redirects to /login internally on no session — must NOT be
+  // wrapped in try/catch (Next's own docs: redirect() throws and must propagate,
+  // in Route Handlers too, not just pages).
+  const teacher = await requireTeacher();
+  const teacherId = teacher.id;
 
-  const kit = await getKitForTeacher(kitId, teacherId).catch(() => null);
-  if (!kit) {
+  let kit;
+  try {
+    kit = await getKitForTeacher(kitId, teacherId);
+  } catch {
     return NextResponse.json({ error: "Kit not found" }, { status: 404 });
   }
 
@@ -111,9 +110,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
     classSize: kit.classSize,
     periodMinutes: kit.periodMinutes,
     lowResource: kit.lowResource,
-    chapterText: kit.chapter
-      ? await getChapterPromptText(kit.chapter.id, kit.pageFrom ?? undefined, kit.pageTo ?? undefined)
-      : undefined,
+    chapterText: kit.chapter ? toPromptText(sliceChapterPages(kit.chapter.pagesEn as ChapterPage[], kit.pageFrom, kit.pageTo)) : undefined,
     topic: kit.topic ?? undefined,
   };
 
@@ -154,6 +151,10 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
       demoCache: kit.chapter ? { chapterId: kit.chapter.id, sectionType } : undefined,
     });
 
+    // A section row exists from the moment POST /api/kits creates it PENDING, so
+    // "existingSection is truthy" is NOT the same as "this has been generated before" —
+    // version stays 0 until the first successful generation.
+    const isFirstGeneration = (existingSection?.version ?? 0) === 0;
     const nextVersion = (existingSection?.version ?? 0) + 1;
 
     await prisma.$transaction([
@@ -191,7 +192,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
       prisma.activityLog.create({
         data: {
           teacherId,
-          type: existingSection ? "SECTION_REGENERATED" : "SECTION_GENERATED",
+          type: isFirstGeneration ? "SECTION_GENERATED" : "SECTION_REGENERATED",
           kitId: kit.id,
           minutesSavedEstimate: MINUTES_SAVED[sectionType] ?? 0,
         },
@@ -221,16 +222,13 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/kits/[id]/sect
   }
   const sectionType = type;
 
-  let teacherId: string;
-  try {
-    const teacher = await requireTeacher();
-    teacherId = teacher.id;
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const teacher = await requireTeacher(); // must not be try/catch-wrapped — see the POST handler above
+  const teacherId = teacher.id;
 
-  const kit = await getKitForTeacher(kitId, teacherId).catch(() => null);
-  if (!kit) {
+  let kit;
+  try {
+    kit = await getKitForTeacher(kitId, teacherId);
+  } catch {
     return NextResponse.json({ error: "Kit not found" }, { status: 404 });
   }
 

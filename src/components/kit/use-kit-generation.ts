@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SectionStatus, SectionType } from "@/generated/prisma/enums";
 import type { SectionUiStatus } from "./section-status-pill";
+import type { ValidationRuleResult } from "@/lib/validate";
 
 export interface KitSectionInit {
   type: SectionType;
@@ -73,12 +74,16 @@ async function patchSection(kitId: string, type: SectionType, content: unknown) 
   return data;
 }
 
-async function postValidate(kitId: string): Promise<{ failedByType?: Partial<Record<SectionType, string[]>> } | null> {
-  // /api/kits/:id/validate lands in M7 (P5.3) — tolerate a 404 until then.
+interface ValidateResponse {
+  results: ValidationRuleResult[];
+  failedByType?: Partial<Record<SectionType, string[]>>;
+}
+
+async function postValidate(kitId: string): Promise<ValidateResponse | null> {
   try {
     const res = await fetch(`/api/kits/${kitId}/validate`, { method: "POST" });
     if (!res.ok) return null;
-    return (await res.json()) as { failedByType?: Partial<Record<SectionType, string[]>> };
+    return (await res.json()) as ValidateResponse;
   } catch {
     return null;
   }
@@ -92,7 +97,14 @@ export function useKitGeneration(kit: KitForGeneration) {
     }
     return init;
   });
+  const [checks, setChecks] = useState<ValidationRuleResult[] | null>(null);
   const started = useRef(false);
+
+  const refreshValidation = useCallback(async () => {
+    const validation = await postValidate(kit.id);
+    if (validation) setChecks(validation.results);
+    return validation;
+  }, [kit.id]);
 
   const present = useCallback((type: SectionType) => type in sections, [sections]);
 
@@ -142,15 +154,17 @@ export function useKitGeneration(kit: KitForGeneration) {
       return next;
     });
 
-    const validation = await postValidate(kit.id);
+    const validation = await refreshValidation();
     const failedByType = validation?.failedByType ?? {};
 
+    const anyRepair = Object.values(failedByType).some((rules) => rules && rules.length > 0);
     await Promise.allSettled(
       Object.entries(failedByType).map(async ([type, rules]) => {
         if (!rules || rules.length === 0) return;
         await runOne(type as SectionType, { repair: rules });
       }),
     );
+    if (anyRepair) await refreshValidation(); // show what's still red after the one repair attempt
 
     setSections((prev) => {
       const next = { ...prev };
@@ -159,7 +173,7 @@ export function useKitGeneration(kit: KitForGeneration) {
       }
       return next;
     });
-  }, [runIfNeeded, present, runOne, kit.id]);
+  }, [runIfNeeded, present, runOne, refreshValidation]);
 
   useEffect(() => {
     if (started.current) return;
@@ -168,15 +182,23 @@ export function useKitGeneration(kit: KitForGeneration) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const regenerate = useCallback((type: SectionType, instruction?: string) => runOne(type, instruction ? { instruction } : {}), [runOne]);
+  const regenerate = useCallback(
+    async (type: SectionType, instruction?: string) => {
+      const success = await runOne(type, instruction ? { instruction } : {});
+      if (success) await refreshValidation(); // §5.2: regenerating re-runs the checker (and quiz-staleness depends on it)
+      return success;
+    },
+    [runOne, refreshValidation],
+  );
 
   const save = useCallback(
     async (type: SectionType, content: unknown) => {
       const saved = await patchSection(kit.id, type, content);
       setSections((prev) => ({ ...prev, [type]: { status: "done", content: saved } }));
+      await refreshValidation();
     },
-    [kit.id],
+    [kit.id, refreshValidation],
   );
 
-  return { sections, regenerate, retry: (type: SectionType) => runOne(type), save };
+  return { sections, checks, regenerate, retry: (type: SectionType) => runOne(type), save };
 }

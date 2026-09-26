@@ -11,12 +11,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { AppSidebarNav } from "./app-sidebar";
+import { cn } from "@/lib/utils";
 
-export function AppTopbar() {
+export function AppTopbar({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 md:px-6">
+    <header className={cn("flex h-14 items-center justify-between border-b border-border bg-background px-4 md:px-6", className)}>
       <div className="flex items-center gap-2">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger

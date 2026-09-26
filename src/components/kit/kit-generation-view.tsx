@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useKitGeneration, type KitForGeneration } from "./use-kit-generation";
 import { SectionStatusPill } from "./section-status-pill";
 import { RegenerateControl } from "./regenerate-control";
+import { CheckerPanel } from "./checker-panel";
 import { isQuizStale } from "./quiz-freshness";
 import { ObjectivesCard } from "./objectives-card";
 import { LessonPlanCard } from "./lesson-plan-card";
@@ -90,13 +91,18 @@ function SectionBody({
 }
 
 export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title: string }) {
-  const { sections, retry, regenerate, save } = useKitGeneration(kit);
+  const { sections, checks, retry, regenerate, save } = useKitGeneration(kit);
   const planContent = sections[SectionType.LESSON_PLAN]?.content;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      {ORDER.filter((type) => type in sections).map((type) => {
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[280px_1fr]">
+      <div className="space-y-4 lg:sticky lg:top-4">
+        <CheckerPanel results={checks} />
+      </div>
+
+      <div className="min-w-0 space-y-6">
+        <h1 className="text-2xl font-semibold">{title}</h1>
+        {ORDER.filter((type) => type in sections).map((type) => {
         const state = sections[type];
         const canEditOrRegenerate = state.status === "done";
         return (
@@ -137,7 +143,8 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
             )}
           </div>
         );
-      })}
+        })}
+      </div>
     </div>
   );
 }

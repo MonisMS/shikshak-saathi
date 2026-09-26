@@ -2,11 +2,10 @@ import { requireTeacher } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { NewKitForm } from "@/components/kit/new-kit-form";
 
-// ASSUMED CONTRACT: requireTeacher() resolves to { id: string, ... } or throws (see
-// api/kits/[id]/sections/[type]/route.ts). Curriculum + classrooms are fetched here
-// directly via Prisma (teacherId-scoped in-line) instead of GET /api/curriculum /
-// a classrooms-listing API, since neither exists yet (Ujjwal's api/** — this session
-// avoided adding new files there per the folder-ownership split).
+// Curriculum + classrooms are fetched here directly via Prisma (teacherId-scoped
+// in-line) instead of GET /api/curriculum / a classrooms-listing API, since neither
+// exists yet (Ujjwal's api/** — this session avoided adding new files there per the
+// folder-ownership split).
 export default async function NewKitPage() {
   const teacher = await requireTeacher();
 

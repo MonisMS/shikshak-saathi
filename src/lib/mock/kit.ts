@@ -82,6 +82,12 @@ export const mockLessonPlan: z.infer<typeof LessonPlan> = {
       correction: "Neutralisation forms a new substance — a salt and water — it does not vanish.",
       pageRef: 22,
     },
+    {
+      id: "M3",
+      misconception: "Students think a pH of 7 must mean something is either very acidic or very basic, not the neutral midpoint.",
+      correction: "The pH scale runs 0 (strongly acidic) to 14 (strongly basic); 7 sits exactly in the middle and means neutral.",
+      pageRef: 21,
+    },
   ],
   sections: [
     {
@@ -242,6 +248,17 @@ export const mockWorksheet: z.infer<typeof Worksheet> = {
       objectiveId: "O2",
       pageRef: 22,
     },
+    {
+      id: "W7",
+      type: "short_answer",
+      prompt: "Name one safety precaution you should take while testing acids and bases in the lab.",
+      answer: "Wear safety goggles (or: do not taste/touch the substances directly; handle carefully).",
+      marks: 1,
+      difficulty: "easy",
+      bloom: "remember",
+      objectiveId: "O4",
+      pageRef: 23,
+    },
   ],
   totalMarks: 10,
 };
@@ -279,10 +296,10 @@ export const mockExitQuiz: z.infer<typeof Quiz> = {
       id: "Q3",
       stem: "On the pH scale, a value of 7 means the substance is:",
       options: [
-        { id: "A", text: "Strongly acidic", correct: false },
+        { id: "A", text: "Strongly acidic", correct: false, misconceptionId: "M3", whyWrong: "pH 7 is the exact midpoint of the scale, not the acidic end." },
         { id: "B", text: "Neutral", correct: true },
-        { id: "C", text: "Strongly basic", correct: false },
-        { id: "D", text: "Not measurable", correct: false },
+        { id: "C", text: "Strongly basic", correct: false, misconceptionId: "M3", whyWrong: "pH 7 is the exact midpoint of the scale, not the basic end." },
+        { id: "D", text: "Not measurable", correct: false, misconceptionId: "M3", whyWrong: "Every substance has a pH value; 7 is simply the neutral point." },
       ],
       objectiveId: "O3",
       pageRef: 21,
