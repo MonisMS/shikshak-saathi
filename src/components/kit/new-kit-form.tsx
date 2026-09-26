@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,7 +38,16 @@ interface ClassroomOption {
   lowResource: boolean;
 }
 
-export function NewKitForm({ chapters, classrooms }: { chapters: ChapterOption[]; classrooms: ClassroomOption[] }) {
+export function NewKitForm({
+  chapters,
+  classrooms,
+  initialIntent,
+}: {
+  chapters: ChapterOption[];
+  classrooms: ClassroomOption[];
+  /** Prefills the form from a voice intent handed off by the dashboard's mic (§6). */
+  initialIntent?: VoiceIntentResult;
+}) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
 
@@ -103,6 +112,14 @@ export function NewKitForm({ chapters, classrooms }: { chapters: ChapterOption[]
     setActiveTab("topic");
     toast.success("Filled from voice");
   }
+
+  const appliedInitialIntent = useRef(false);
+  useEffect(() => {
+    if (appliedInitialIntent.current || !initialIntent) return;
+    appliedInitialIntent.current = true;
+    handleVoiceIntent(initialIntent);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialIntent]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
