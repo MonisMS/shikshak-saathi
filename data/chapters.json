@@ -1,0 +1,58 @@
+[
+  {
+    "id": "c7-sci-02",
+    "grade": 7,
+    "subject": "Science",
+    "bookName": "Curiosity (Science, Class 7)",
+    "chapterNo": 2,
+    "titleEn": "Exploring Substances: Acidic, Basic, and Neutral",
+    "titleHi": "पदार्थों का अन्वेषण: अम्लीय, क्षारीय एवं उदासीन",
+    "sourceUrlEn": "https://ncert.nic.in/textbook/pdf/gecu102.pdf",
+    "sourceUrlHi": "https://ncert.nic.in/textbook/pdf/ghcu102.pdf",
+    "pdfEn": "gecu102.pdf",
+    "pdfHi": "ghcu102.pdf",
+    "pageStart": 7
+  },
+  {
+    "id": "c7-sci-03",
+    "grade": 7,
+    "subject": "Science",
+    "bookName": "Curiosity (Science, Class 7)",
+    "chapterNo": 3,
+    "titleEn": "Electricity: Circuits and their Components",
+    "titleHi": null,
+    "sourceUrlEn": "https://ncert.nic.in/textbook/pdf/gecu103.pdf",
+    "sourceUrlHi": "https://ncert.nic.in/textbook/pdf/ghcu103.pdf",
+    "pdfEn": "gecu103.pdf",
+    "pdfHi": "ghcu103.pdf",
+    "pageStart": 23
+  },
+  {
+    "id": "c7-math-01",
+    "grade": 7,
+    "subject": "Maths",
+    "bookName": "Ganita Prakash (Maths, Class 7)",
+    "chapterNo": 1,
+    "titleEn": "Large Numbers Around Us",
+    "titleHi": null,
+    "sourceUrlEn": "https://ncert.nic.in/textbook/pdf/gegp101.pdf",
+    "sourceUrlHi": "https://ncert.nic.in/textbook/pdf/ghgp101.pdf",
+    "pdfEn": "gegp101.pdf",
+    "pdfHi": "ghgp101.pdf",
+    "pageStart": 1
+  },
+  {
+    "id": "c6-sci-04",
+    "grade": 6,
+    "subject": "Science",
+    "bookName": "Curiosity (Science, Class 6)",
+    "chapterNo": 4,
+    "titleEn": "Exploring Magnets",
+    "titleHi": null,
+    "sourceUrlEn": "https://ncert.nic.in/textbook/pdf/fecu104.pdf",
+    "sourceUrlHi": "https://ncert.nic.in/textbook/pdf/fhcu104.pdf",
+    "pdfEn": "fecu104.pdf",
+    "pdfHi": "fhcu104.pdf",
+    "pageStart": 61
+  }
+]
