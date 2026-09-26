@@ -59,6 +59,10 @@ export async function generateJSONViaOpenRouter<T extends z.ZodType>(opts: {
           },
           provider: { require_parameters: true },
           temperature: 0.4,
+          // Without an explicit cap, some providers default to the model's max (e.g. 65536),
+          // which OpenRouter's credit check prices against up front (→ 402 on a small balance)
+          // and which also risks a very slow generation. Our JSON sections are all well under this.
+          max_tokens: 8000,
         }),
         signal: AbortSignal.timeout(45_000),
       });

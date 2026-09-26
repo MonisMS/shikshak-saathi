@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/session";
 import { getKitForTeacher } from "@/lib/scope";
+import { logActivity } from "@/lib/activity";
 import { SectionStatus, SectionType } from "@/generated/prisma/client";
 import { LessonPlan, Worksheet, Quiz, ParentNote } from "@/lib/ai/schemas";
 import { PrintTrigger } from "@/components/print/print-trigger";
@@ -61,6 +62,9 @@ export default async function PrintPage(props: PageProps<"/kits/[id]/print">) {
   }
 
   if (docs.length === 0) notFound();
+
+  // P6.4: "log KIT_EXPORTED_PDF when print is opened" — this page's own load IS that open.
+  await logActivity(teacher.id, "KIT_EXPORTED_PDF", { kitId: kit.id });
 
   return (
     <div className={onepage ? "text-xs leading-tight" : "text-sm leading-normal"}>
