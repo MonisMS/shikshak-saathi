@@ -20,11 +20,24 @@ import { MicButton, type VoiceIntentResult } from "@/components/voice/mic-button
 import { FadeIn } from "@/components/motion/fade-in";
 import { FileUp, Loader2, X } from "lucide-react";
 import { NCERT_CATALOG } from "@/lib/ncert-catalog";
+import type { ResourceListItem } from "@/lib/resources";
+import { AudioLines, FileText } from "lucide-react";
 
 type SourceTab = "chapter" | "topic" | "upload";
 const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
 const STANDARD_SUBJECTS = ["Science", "Maths", "English", "Hindi", "Social Science", "EVS", "Sanskrit"];
-const ACCEPT = ".pdf,.docx,.txt,image/*,audio/*";
+const DOC_ACCEPT = ".pdf,.docx,.txt,image/*";
+const AUDIO_ACCEPT = "audio/*,.mp3,.m4a,.wav,.ogg,.webm";
+type Page = { page: number; text: string; source?: string };
+
+async function extractPages(files: File[]): Promise<Page[]> {
+  const form = new FormData();
+  files.forEach((f) => form.append("files", f));
+  const res = await fetch("/api/sources/extract", { method: "POST", body: form });
+  const data: unknown = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string })?.error ?? `Failed (${res.status})`);
+  return (data as { pages: Page[] }).pages;
+}
 
 interface ChapterPick {
   value: string;
@@ -52,7 +65,17 @@ function chapterOptions(chapters: ChapterOption[], grade: number, subject: strin
   return picks.sort((a, b) => a.no - b.no);
 }
 
-function SourceDropzone({ onFiles, disabled }: { onFiles: (files: File[]) => void; disabled?: boolean }) {
+function SourceDropzone({
+  onFiles,
+  disabled,
+  accept,
+  hint,
+}: {
+  onFiles: (files: File[]) => void;
+  disabled?: boolean;
+  accept: string;
+  hint: string;
+}) {
   const [over, setOver] = useState(false);
   return (
     <label
@@ -66,17 +89,17 @@ function SourceDropzone({ onFiles, disabled }: { onFiles: (files: File[]) => voi
         setOver(false);
         if (!disabled && e.dataTransfer.files.length) onFiles(Array.from(e.dataTransfer.files));
       }}
-      className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${
+      className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed p-4 text-center transition-colors ${
         over ? "border-primary bg-accent" : "border-border hover:border-primary/60"
       } ${disabled ? "pointer-events-none opacity-60" : ""}`}
     >
       <FileUp className="size-6 text-primary" />
       <span className="text-sm font-medium">Drop files here or click to choose</span>
-      <span className="text-xs text-muted-foreground">PDF, Word (.docx), photos of textbook pages (several at once), audio recordings, .txt</span>
+      <span className="text-xs text-muted-foreground">{hint}</span>
       <input
         type="file"
         multiple
-        accept={ACCEPT}
+        accept={accept}
         className="sr-only"
         disabled={disabled}
         onChange={(e) => {
@@ -111,9 +134,13 @@ export function NewKitForm({
   chapters,
   classrooms,
   initialIntent,
+  library = [],
+  initialResourceIds = [],
 }: {
   chapters: ChapterOption[];
   classrooms: ClassroomOption[];
+  library?: ResourceListItem[];
+  initialResourceIds?: string[];
   /** Prefills the form from a voice intent handed off by the dashboard's mic (§6). */
   initialIntent?: VoiceIntentResult;
 }) {
@@ -138,7 +165,7 @@ export function NewKitForm({
 
   // Upload tab: files are read into numbered source pages as soon as they're added.
   const [files, setFiles] = useState<File[]>([]);
-  const [sourcePages, setSourcePages] = useState<{ page: number; text: string; source?: string }[] | null>(null);
+  const [sourcePages, setSourcePages] = useState<Page[] | null>(null);
   const [reading, setReading] = useState(false);
   const [sourceName, setSourceName] = useState("");
 
@@ -149,16 +176,36 @@ export function NewKitForm({
     if (!sourceName) setSourceName(next[0].name.replace(/\.[^.]+$/, ""));
     setReading(true);
     try {
-      const form = new FormData();
-      next.forEach((f) => form.append("files", f));
-      const res = await fetch("/api/sources/extract", { method: "POST", body: form });
-      const data: unknown = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((data as { error?: string })?.error ?? `Failed (${res.status})`);
-      setSourcePages((data as { pages: { page: number; text: string; source?: string }[] }).pages);
+      setSourcePages(await extractPages(next));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not read the files");
     } finally {
       setReading(false);
+    }
+  }
+
+  // Optional class recording: pick one from Recordings, or upload audio to transcribe.
+  const documents = library.filter((r) => r.kind !== "audio");
+  const recordings = library.filter((r) => r.kind === "audio");
+  const [materialId, setMaterialId] = useState<string | undefined>(initialResourceIds.find((id) => documents.some((d) => d.id === id)));
+  const [recordingId, setRecordingId] = useState<string | undefined>(initialResourceIds.find((id) => recordings.some((d) => d.id === id)));
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioPages, setAudioPages] = useState<Page[] | null>(null);
+  const [readingAudio, setReadingAudio] = useState(false);
+
+  async function readAudio(file: File | null) {
+    setAudioFile(file);
+    setAudioPages(null);
+    if (!file) return;
+    setRecordingId(undefined);
+    setReadingAudio(true);
+    try {
+      setAudioPages(await extractPages([file]));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not transcribe the audio");
+      setAudioFile(null);
+    } finally {
+      setReadingAudio(false);
     }
   }
 
@@ -170,7 +217,7 @@ export function NewKitForm({
   const [lowResource, setLowResource] = useState(classroom?.lowResource ?? true);
   const [scheduledFor, setScheduledFor] = useState("");
   const [teacherNote, setTeacherNote] = useState("");
-  const [activeTab, setActiveTab] = useState<SourceTab>("chapter");
+  const [activeTab, setActiveTab] = useState<SourceTab>(initialResourceIds.length ? "upload" : "chapter");
 
   // F31: "Speaking Hindi fills the form" — try to match a seeded chapter first,
   // fall back to the typed-topic tab when there's no exact grade+subject+chapterNo match.
@@ -207,7 +254,8 @@ export function NewKitForm({
     e.preventDefault();
     if (activeTab === "chapter" && !chapterId) return void toast.error("Pick a chapter, or type a topic / upload material");
     if (activeTab === "topic" && !topic.trim()) return void toast.error("Type the topic you want to teach");
-    if (activeTab === "upload" && !sourcePages?.length) return void toast.error(reading ? "Still reading your files…" : "Upload your material first");
+    if (activeTab === "upload" && (reading || readingAudio)) return void toast.error("Still reading your files…");
+    if (activeTab === "upload" && !materialId && !sourcePages?.length) return void toast.error("Choose material from Resources or upload it");
     setSubmitting(true);
 
     // OBJECTIVES/LESSON_PLAN are added server-side automatically (Ujjwal's POST /api/kits
@@ -232,7 +280,11 @@ export function NewKitForm({
           : { topic: `Chapter ${pickedChapter?.no}: ${pickedChapter?.title} (NCERT ${pickedChapter?.book}, Class ${grade} ${subject})` }
         : activeTab === "topic"
           ? { topic: topic.trim() }
-          : { sourcePages, sourceName: sourceName.trim() || undefined }),
+          : {
+              resourceIds: [materialId, recordingId].filter((x): x is string => !!x),
+              sourcePages: [...(sourcePages ?? []), ...(audioPages ?? [])],
+              sourceName: sourceName.trim() || undefined,
+            }),
     };
 
     try {
@@ -301,10 +353,10 @@ export function NewKitForm({
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v as SourceTab)} className="pt-2">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="chapter">NCERT chapter</TabsTrigger>
             <TabsTrigger value="topic">Type topic</TabsTrigger>
-            <TabsTrigger value="upload">Upload material</TabsTrigger>
+            <TabsTrigger value="upload">Material + recording</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chapter" className="space-y-3 pt-4">
@@ -351,45 +403,116 @@ export function NewKitForm({
             <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Photosynthesis in green plants" maxLength={2000} />
           </TabsContent>
 
-          <TabsContent value="upload" className="space-y-3 pt-4">
-            <SourceDropzone disabled={reading} onFiles={(added) => readFiles([...files, ...added])} />
-            {files.length > 0 && (
-              <ul className="space-y-1.5">
-                {files.map((f, i) => (
-                  <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2 text-sm">
-                    <span className="min-w-0 truncate">{f.name}</span>
-                    <button
-                      type="button"
-                      disabled={reading}
-                      onClick={() => readFiles(files.filter((_, j) => j !== i))}
-                      className="shrink-0 text-muted-foreground hover:text-destructive disabled:opacity-50"
-                      aria-label={`Remove ${f.name}`}
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {reading && (
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" /> Reading your files — images and audio take a little longer…
-              </p>
-            )}
-            {sourcePages && !reading && (
-              <div className="rounded-2xl border border-border p-3">
+          <TabsContent value="upload" className="space-y-4 pt-4">
+            <div className="space-y-3 rounded-2xl border border-border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="flex items-center gap-2 font-medium"><FileText className="size-4 text-rose-600" /> Teaching material</p>
+                <span className="text-xs text-muted-foreground">Required</span>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Choose from Resources</Label>
+                <Select
+                  items={[{ value: "none", label: documents.length ? "— None —" : "Your Resources are empty" }, ...documents.map((d) => ({ value: d.id, label: d.title }))]}
+                  value={materialId ?? "none"}
+                  onValueChange={(v) => setMaterialId(v && v !== "none" ? v : undefined)}
+                >
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{documents.length ? "— None —" : "Your Resources are empty"}</SelectItem>
+                    {documents.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">or upload new</p>
+              <SourceDropzone
+                disabled={reading}
+                accept={DOC_ACCEPT}
+                hint="PDF, Word (.docx), .txt, or several photos of textbook pages"
+                onFiles={(added) => readFiles([...files, ...added])}
+              />
+              {files.length > 0 && (
+                <ul className="space-y-1.5">
+                  {files.map((f, i) => (
+                    <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2 text-sm">
+                      <span className="min-w-0 truncate">{f.name}</span>
+                      <button
+                        type="button"
+                        disabled={reading}
+                        onClick={() => readFiles(files.filter((_, j) => j !== i))}
+                        className="shrink-0 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                        aria-label={`Remove ${f.name}`}
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {reading && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Reading your files…
+                </p>
+              )}
+              {sourcePages && !reading && (
                 <p className="text-sm font-medium text-primary">
                   Read {sourcePages.length} page{sourcePages.length === 1 ? "" : "s"} from {files.length} file{files.length === 1 ? "" : "s"}
                 </p>
-                <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">{sourcePages[0]?.text}</p>
+              )}
+              {files.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Name this material</Label>
+                  <Input className="h-11" value={sourceName} onChange={(e) => setSourceName(e.target.value)} placeholder="e.g. Chapter 5 notes" maxLength={200} />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 rounded-2xl border border-border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="flex items-center gap-2 font-medium"><AudioLines className="size-4 text-violet-600" /> Class recording</p>
+                <span className="text-xs text-muted-foreground">Optional</span>
               </div>
-            )}
-            {files.length > 0 && (
+              <p className="text-xs text-muted-foreground">Add what you said in class so the plan builds on it — e.g. the doubts students raised.</p>
               <div className="space-y-1.5">
-                <Label>Name this material</Label>
-                <Input className="h-11" value={sourceName} onChange={(e) => setSourceName(e.target.value)} placeholder="e.g. Chapter 5 notes" maxLength={200} />
+                <Label>Choose from Recordings</Label>
+                <Select
+                  items={[{ value: "none", label: recordings.length ? "— None —" : "No recordings yet" }, ...recordings.map((r) => ({ value: r.id, label: r.title }))]}
+                  value={recordingId ?? "none"}
+                  onValueChange={(v) => {
+                    setRecordingId(v && v !== "none" ? v : undefined);
+                    if (v && v !== "none") void readAudio(null);
+                  }}
+                >
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{recordings.length ? "— None —" : "No recordings yet"}</SelectItem>
+                    {recordings.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+              <p className="text-center text-xs text-muted-foreground">or upload audio</p>
+              {audioFile ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2 text-sm">
+                  <span className="flex min-w-0 items-center gap-2 truncate">
+                    {readingAudio ? <Loader2 className="size-4 animate-spin" /> : <AudioLines className="size-4 text-violet-600" />}
+                    {audioFile.name}
+                    {readingAudio ? " — transcribing…" : audioPages ? " — transcribed" : ""}
+                  </span>
+                  <button type="button" disabled={readingAudio} onClick={() => readAudio(null)} className="text-muted-foreground hover:text-destructive" aria-label="Remove audio">
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ) : (
+                <SourceDropzone
+                  accept={AUDIO_ACCEPT}
+                  hint="mp3, m4a, wav or webm — transcribed in Hindi or English"
+                  onFiles={(added) => void readAudio(added[0] ?? null)}
+                />
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </FadeIn>

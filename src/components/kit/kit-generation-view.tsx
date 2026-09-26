@@ -37,6 +37,8 @@ const SECTION_TITLES: Record<SectionType, string> = {
 };
 
 const OPTIONAL_BLURB: Partial<Record<SectionType, string>> = {
+  OBJECTIVES: "3–5 learning objectives for this lesson, each tied to its source page.",
+  LESSON_PLAN: "A timed plan for the period — what you say, what students do, and the misconceptions to watch for.",
   WORKSHEET: "Practice questions with an answer key, built from your lesson plan.",
   EXIT_QUIZ: "3–5 quick questions where every wrong option points to a misconception. Needed to enter results after class.",
   PARENT_NOTE: "A short, WhatsApp-ready note for parents with tonight’s homework and one home activity.",
@@ -120,7 +122,7 @@ function SectionBody({
 }
 
 export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title: string }) {
-  const { sections, checks, generate, retry, regenerate, save } = useKitGeneration(kit);
+  const { sections, checks, generate, regenerate, save } = useKitGeneration(kit);
   const planContent = sections[SectionType.LESSON_PLAN]?.content;
   const planReady = sections[SectionType.LESSON_PLAN]?.status === "done";
 
@@ -144,11 +146,6 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
               <h2 className="text-lg font-medium">{SECTION_TITLES[type]}</h2>
               <div className="flex items-center gap-2">
                 <SectionStatusPill status={state.status} />
-                {state.status === "failed" && (
-                  <Button size="sm" variant="outline" onClick={() => retry(type)}>
-                    Retry
-                  </Button>
-                )}
                 {canEditOrRegenerate && (
                   <RegenerateControl onRegenerate={async (instruction) => { await regenerate(type, instruction); }} />
                 )}
@@ -163,9 +160,10 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
                 <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
                   <div className="flex flex-col gap-4 rounded-3xl border border-dashed border-border bg-card/60 p-5 sm:flex-row sm:items-center sm:justify-between">
                     <p className="max-w-md text-sm text-muted-foreground">
-                      {planReady ? OPTIONAL_BLURB[type] : "Available once the lesson plan is ready — review and edit the plan first."}
+                      {OPTIONAL_BLURB[type]}
+                      {!planReady && type !== SectionType.OBJECTIVES && type !== SectionType.LESSON_PLAN && " The lesson plan will be created first."}
                     </p>
-                    <Button disabled={!planReady} onClick={() => generate(type)} className="shrink-0">
+                    <Button onClick={() => generate(type)} className="shrink-0">
                       <Sparkles /> Generate {SECTION_TITLES[type].toLowerCase()}
                     </Button>
                   </div>
@@ -183,7 +181,7 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
                   <Card className="border-border/70">
                     <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-destructive">{friendlyError(state.error)}</p>
-                      <Button size="sm" onClick={() => retry(type)} className="shrink-0">Retry</Button>
+                      <Button size="sm" onClick={() => generate(type)} className="shrink-0">Retry</Button>
                     </CardContent>
                   </Card>
                 </motion.div>

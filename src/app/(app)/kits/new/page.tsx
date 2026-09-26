@@ -1,6 +1,7 @@
 import { requireTeacher } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { NewKitForm } from "@/components/kit/new-kit-form";
+import { listResources } from "@/lib/resources";
 import type { VoiceIntentResult } from "@/components/voice/mic-button";
 
 // Curriculum + classrooms are fetched here directly via Prisma (teacherId-scoped
@@ -22,7 +23,7 @@ export default async function NewKitPage(props: PageProps<"/kits/new">) {
   };
   const hasInitialIntent = Object.values(initialIntent).some((v) => v !== undefined);
 
-  const [chapters, classrooms] = await Promise.all([
+  const [chapters, classrooms, library] = await Promise.all([
     prisma.chapter.findMany({
       orderBy: [{ grade: "asc" }, { subject: "asc" }, { chapterNo: "asc" }],
       select: { id: true, grade: true, subject: true, chapterNo: true, titleEn: true, titleHi: true },
@@ -32,7 +33,17 @@ export default async function NewKitPage(props: PageProps<"/kits/new">) {
       orderBy: { name: "asc" },
       select: { id: true, name: true, subject: true, grades: true, studentCount: true, isMultiGrade: true, lowResource: true },
     }),
+    listResources(teacher.id),
   ]);
+  const preselected = one(sp.resource);
 
-  return <NewKitForm chapters={chapters} classrooms={classrooms} initialIntent={hasInitialIntent ? initialIntent : undefined} />;
+  return (
+    <NewKitForm
+      chapters={chapters}
+      classrooms={classrooms}
+      library={library}
+      initialResourceIds={preselected && library.some((r) => r.id === preselected) ? [preselected] : []}
+      initialIntent={hasInitialIntent ? initialIntent : undefined}
+    />
+  );
 }

@@ -20,6 +20,8 @@ export const config = {
     "/notes/:path*",
     "/schedule/:path*",
     "/settings/:path*",
+    "/resources/:path*",
+    "/recordings/:path*",
     "/onboarding/:path*",
   ],
 };

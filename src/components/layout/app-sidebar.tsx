@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { LayoutDashboard, PlusCircle, BookOpen, NotebookPen, ClipboardCheck, Settings, LogOut, Sparkles } from "lucide-react";
+import { LayoutDashboard, PlusCircle, BookOpen, FolderOpen, AudioLines, NotebookPen, ClipboardCheck, Settings, LogOut, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { clearOfflineKits } from "@/components/pwa/pwa";
@@ -15,6 +15,8 @@ const ICONS: Record<(typeof NAV_LINKS)[number]["href"], React.ComponentType<{ cl
   "/kits/new": PlusCircle,
   "/kits": BookOpen,
   "/tests": ClipboardCheck,
+  "/resources": FolderOpen,
+  "/recordings": AudioLines,
   "/notes": NotebookPen,
   "/settings": Settings,
 };

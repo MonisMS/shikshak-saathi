@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { SourcePage } from "@/lib/kit-source";
+import { sourcePagesFromResources } from "@/lib/resources";
 import * as z from "zod";
 import { prisma } from "@/lib/db";
 import { getAuthedTeacher } from "@/lib/session";
@@ -37,9 +38,10 @@ const CreateKitBody = z
     grade: z.number().int().min(1).max(12).optional(),
     subject: z.string().max(60).optional(),
     sourceName: z.string().max(200).optional(),
-    sourcePages: z.array(SourcePage).min(1).max(400).optional(),
+    sourcePages: z.array(SourcePage).max(400).optional(),
+    resourceIds: z.array(z.string()).max(20).optional(),
   })
-  .refine((b) => b.chapterId || b.topic || b.sourcePages, {
+  .refine((b) => b.chapterId || b.topic || b.sourcePages?.length || b.resourceIds?.length, {
     message: "Pick a chapter, type a topic or upload material",
   });
 
@@ -63,6 +65,13 @@ export async function POST(req: Request) {
     if (!classroom) return NextResponse.json({ error: "Classroom not found" }, { status: 404 });
   }
 
+  if (body.sourcePages?.length === 0) body.sourcePages = undefined;
+  if (body.resourceIds?.length && !body.chapterId) {
+    const fromLibrary = await sourcePagesFromResources(teacher.id, body.resourceIds);
+    if (fromLibrary.pages.length === 0 && !body.sourcePages) return NextResponse.json({ error: "Those resources have no text" }, { status: 400 });
+    body.sourcePages = [...fromLibrary.pages, ...(body.sourcePages ?? [])].slice(0, 400).map((p, i) => ({ ...p, page: i + 1 }));
+    body.sourceName ??= fromLibrary.titles.join(" + ").slice(0, 200);
+  }
   const sourceName = body.sourceName?.trim() || "Uploaded material";
   let title = body.topic ?? (body.sourcePages ? sourceName : "Untitled kit");
   if (!body.chapterId && body.grade && body.subject) title = `Class ${body.grade} ${body.subject} — ${title}`;

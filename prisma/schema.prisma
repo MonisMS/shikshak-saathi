@@ -109,6 +109,7 @@ model User {
   testPublications TestPublication[]
 
   @@map("user")
+  resources      TeachingResource[]
 }
 
 model Session {
@@ -494,4 +495,22 @@ model ClassNote {
   updatedAt       DateTime @updatedAt
 
   @@index([teacherId, createdAt])
+}
+
+model TeachingResource {
+  id           String   @id @default(cuid())
+  teacherId    String
+  teacher      User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  kind         String // "pdf" | "doc" | "image" | "text" | "audio" — audio = class recording
+  title        String
+  grade        Int?
+  subject      String?
+  sourceUrl    String? // NCERT PDF link or recording URL
+  fileName     String?
+  audioSeconds Int?
+  pages        Json // [{ page, text, source? }] — extracted text or transcript
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([teacherId, kind, createdAt])
 }

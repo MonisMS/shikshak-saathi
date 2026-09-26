@@ -15,6 +15,8 @@ export interface KitSectionInit {
 export interface KitForGeneration {
   id: string;
   sections: KitSectionInit[];
+  /** True only right after "Create lesson plan" — the one time we generate without a click. */
+  autostart?: boolean;
 }
 
 interface SectionState {
@@ -34,6 +36,13 @@ const DB_TO_UI: Record<SectionStatus, SectionUiStatus> = {
 export const CORE_SECTIONS: SectionType[] = [SectionType.OBJECTIVES, SectionType.LESSON_PLAN];
 /** Offered as "Generate" buttons once the lesson plan is ready — the teacher chooses. */
 export const OPTIONAL_SECTIONS: SectionType[] = [SectionType.WORKSHEET, SectionType.EXIT_QUIZ, SectionType.PARENT_NOTE];
+
+const GENERATE_DEPS: Partial<Record<SectionType, SectionType[]>> = {
+  [SectionType.LESSON_PLAN]: [SectionType.OBJECTIVES],
+  [SectionType.WORKSHEET]: [SectionType.OBJECTIVES, SectionType.LESSON_PLAN],
+  [SectionType.EXIT_QUIZ]: [SectionType.OBJECTIVES, SectionType.LESSON_PLAN],
+  [SectionType.PARENT_NOTE]: [SectionType.OBJECTIVES, SectionType.LESSON_PLAN],
+};
 
 async function postSection(kitId: string, type: SectionType, body: Record<string, unknown> = {}) {
   const res = await fetch(`/api/kits/${kitId}/sections/${type}`, {
@@ -83,14 +92,13 @@ export function useKitGeneration(kit: KitForGeneration) {
     const init: Record<string, SectionState> = {};
     for (const s of kit.sections) {
       const ui = DB_TO_UI[s.status];
-      const optional = OPTIONAL_SECTIONS.includes(s.type);
       init[s.type] = {
-        status: optional && (ui === "queued" || ui === "writing") ? "idle" : ui,
+        status: ui === "queued" || ui === "writing" ? "idle" : ui,
         content: s.content ?? undefined,
         error: s.error ?? undefined,
       };
     }
-    for (const type of OPTIONAL_SECTIONS) {
+    for (const type of [...CORE_SECTIONS, ...OPTIONAL_SECTIONS]) {
       if (!(type in init)) init[type] = { status: "idle" };
     }
     return init;
@@ -103,8 +111,6 @@ export function useKitGeneration(kit: KitForGeneration) {
     if (validation) setChecks(validation.results);
     return validation;
   }, [kit.id]);
-
-  const present = useCallback((type: SectionType) => type in sections, [sections]);
 
   const runOne = useCallback(
     async (type: SectionType, body?: Record<string, unknown>) => {
@@ -121,30 +127,34 @@ export function useKitGeneration(kit: KitForGeneration) {
     [kit.id],
   );
 
-  const start = useCallback(async () => {
-    const generatedNow: SectionType[] = [];
-    for (const type of CORE_SECTIONS) {
-      if (!present(type)) continue;
-      if (sections[type]?.status === "done") continue; // resume support
-      const ok = await runOne(type);
-      if (!ok) return;
-      generatedNow.push(type);
-    }
+  const statusRef = useRef(sections);
+  statusRef.current = sections;
 
-    const validation = await refreshValidation();
-    // One repair attempt, only for sections written in this visit — never silently rewrite reviewed content.
-    const repairs = Object.entries(validation?.failedByType ?? {}).filter(
-      ([type, rules]) => rules && rules.length > 0 && generatedNow.includes(type as SectionType),
-    );
-    if (repairs.length === 0) return;
-    await Promise.allSettled(repairs.map(([type, rules]) => runOne(type as SectionType, { repair: rules })));
-    await refreshValidation();
-  }, [present, sections, runOne, refreshValidation]);
+  /** Generates `type`, first generating any prerequisite that isn't done yet (objectives → plan). */
+  const generate = useCallback(
+    async (type: SectionType) => {
+      for (const dep of GENERATE_DEPS[type] ?? []) {
+        if (statusRef.current[dep]?.status === "done") continue;
+        if (!(await runOne(dep))) return false;
+      }
+      const success = await runOne(type);
+      await refreshValidation();
+      return success;
+    },
+    [runOne, refreshValidation],
+  );
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    void start();
+    if (kit.autostart) {
+      window.history.replaceState(null, "", window.location.pathname); // a refresh must not generate again
+      if (statusRef.current[SectionType.LESSON_PLAN]?.status !== "done") {
+        void generate(SectionType.LESSON_PLAN);
+        return;
+      }
+    }
+    if (Object.values(statusRef.current).some((s) => s.status === "done")) void refreshValidation(); // code-only checks, no AI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -166,14 +176,6 @@ export function useKitGeneration(kit: KitForGeneration) {
     [kit.id, refreshValidation],
   );
 
-  const generate = useCallback(
-    async (type: SectionType) => {
-      const success = await runOne(type);
-      if (success) await refreshValidation();
-      return success;
-    },
-    [runOne, refreshValidation],
-  );
 
   return { sections, checks, generate, regenerate, retry: (type: SectionType) => runOne(type), save };
 }

@@ -19,7 +19,9 @@ const KEYS = (process.env.GEMINI_API_KEYS ?? "")
 
 export const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
 export const MODEL_FAST = process.env.GEMINI_MODEL_FAST ?? "gemini-3.1-flash-lite";
-const MODEL_FALLBACK = "gemini-3.5-flash"; // tried once after every key is rate-limited
+/** Tried in order, each across every key, before falling back to OpenRouter. */
+const MODEL_CHAIN = (primary: string) =>
+  Array.from(new Set([primary, "gemini-3.8-flash", MODEL_FAST, "gemini-3.5-flash"]));
 
 const DEMO_MODE = process.env.DEMO_MODE === "true";
 
@@ -127,22 +129,15 @@ export async function generateJSON<T extends z.ZodType>(opts: {
     throw new Error("File input (PDF/image/audio) requires Gemini; no GEMINI_API_KEYS configured");
   }
 
-  for (const apiKey of KEYS) {
-    try {
-      const result = await callGemini({ schema: opts.schema, system: opts.system, user: opts.user, parts: opts.parts, model, apiKey });
-      return { ...result, model, fromCache: false };
-    } catch (e) {
-      lastError = e;
-      if (!isRetryableGeminiError(e)) break; // a non-rate-limit failure won't fix itself on another key
-    }
-  }
-
-  if (KEYS.length > 0) {
-    try {
-      const result = await callGemini({ schema: opts.schema, system: opts.system, user: opts.user, parts: opts.parts, model: MODEL_FALLBACK, apiKey: KEYS[0] });
-      return { ...result, model: MODEL_FALLBACK, fromCache: false };
-    } catch (e) {
-      lastError = e;
+  for (const m of MODEL_CHAIN(model)) {
+    for (const apiKey of KEYS) {
+      try {
+        const result = await callGemini({ schema: opts.schema, system: opts.system, user: opts.user, parts: opts.parts, model: m, apiKey });
+        return { ...result, model: m, fromCache: false };
+      } catch (e) {
+        lastError = e;
+        if (!isRetryableGeminiError(e)) break; // not a quota/outage problem — try the next model instead
+      }
     }
   }
 
