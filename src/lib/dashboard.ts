@@ -18,10 +18,51 @@ export async function getDashboardData(teacherId: string) {
   const weekStart = new Date(startOfToday);
   weekStart.setDate(weekStart.getDate() - 6);
 
-  const [weekKits, readyKits, kitsWithResults] = await Promise.all([
+  // One round-trip batch, not two sequential ones — every query here is independent
+  // (nothing depends on another query's result), so there's no reason to wait twice.
+  const [
+    weekKits,
+    readyKits,
+    kitsWithResults,
+    totalKits,
+    kitsThisWeek,
+    sectionsGenerated,
+    minutesSavedAgg,
+    recentKits,
+    todayTomorrowKits,
+    pendingResultsKits,
+    topMisconceptions,
+  ] = await Promise.all([
     prisma.lessonKit.findMany({ where: { teacherId, createdAt: { gte: weekStart } }, select: { createdAt: true } }),
     prisma.lessonKit.count({ where: { teacherId, status: "READY", quizSessions: { none: {} } } }),
     prisma.lessonKit.count({ where: { teacherId, quizSessions: { some: {} } } }),
+    prisma.lessonKit.count({ where: { teacherId } }),
+    prisma.lessonKit.count({ where: { teacherId, createdAt: { gte: sevenDaysAgo } } }),
+    prisma.kitSection.count({ where: { type: { in: ["WORKSHEET", "EXIT_QUIZ"] }, status: "READY", kit: { teacherId } } }),
+    prisma.activityLog.aggregate({ where: { teacherId }, _sum: { minutesSavedEstimate: true } }),
+    prisma.lessonKit.findMany({
+      where: { teacherId },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, title: true, status: true, quizSessions: { select: { id: true }, take: 1 } },
+    }),
+    prisma.lessonKit.findMany({
+      where: { teacherId, scheduledFor: { gte: startOfToday, lt: endOfTomorrow } },
+      orderBy: { scheduledFor: "asc" },
+      select: { id: true, title: true, scheduledFor: true, fixesIncluded: { select: { id: true }, take: 1 } },
+    }),
+    prisma.lessonKit.findMany({
+      where: { teacherId, scheduledFor: { lt: startOfToday }, quizSessions: { none: {} } },
+      orderBy: { scheduledFor: "desc" },
+      take: 5,
+      select: { id: true, title: true, scheduledFor: true },
+    }),
+    prisma.misconception.findMany({
+      where: { status: "OPEN", kit: { teacherId } },
+      orderBy: { percent: "desc" },
+      take: 3,
+      select: { id: true, label: true, percent: true, kit: { select: { id: true, title: true } } },
+    }),
   ]);
   const kitsPerDay = Array.from({ length: 7 }, (_, i) => {
     const day = new Date(weekStart);
@@ -30,37 +71,6 @@ export async function getDashboardData(teacherId: string) {
     next.setDate(next.getDate() + 1);
     return { date: day, count: weekKits.filter((k) => k.createdAt >= day && k.createdAt < next).length };
   });
-
-  const [totalKits, kitsThisWeek, sectionsGenerated, minutesSavedAgg, recentKits, todayTomorrowKits, pendingResultsKits, topMisconceptions] =
-    await Promise.all([
-      prisma.lessonKit.count({ where: { teacherId } }),
-      prisma.lessonKit.count({ where: { teacherId, createdAt: { gte: sevenDaysAgo } } }),
-      prisma.kitSection.count({ where: { type: { in: ["WORKSHEET", "EXIT_QUIZ"] }, status: "READY", kit: { teacherId } } }),
-      prisma.activityLog.aggregate({ where: { teacherId }, _sum: { minutesSavedEstimate: true } }),
-      prisma.lessonKit.findMany({
-        where: { teacherId },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: { id: true, title: true, status: true, quizSessions: { select: { id: true }, take: 1 } },
-      }),
-      prisma.lessonKit.findMany({
-        where: { teacherId, scheduledFor: { gte: startOfToday, lt: endOfTomorrow } },
-        orderBy: { scheduledFor: "asc" },
-        select: { id: true, title: true, scheduledFor: true, fixesIncluded: { select: { id: true }, take: 1 } },
-      }),
-      prisma.lessonKit.findMany({
-        where: { teacherId, scheduledFor: { lt: startOfToday }, quizSessions: { none: {} } },
-        orderBy: { scheduledFor: "desc" },
-        take: 5,
-        select: { id: true, title: true, scheduledFor: true },
-      }),
-      prisma.misconception.findMany({
-        where: { status: "OPEN", kit: { teacherId } },
-        orderBy: { percent: "desc" },
-        take: 3,
-        select: { id: true, label: true, percent: true, kit: { select: { id: true, title: true } } },
-      }),
-    ]);
 
   return {
     kitsPerDay,
