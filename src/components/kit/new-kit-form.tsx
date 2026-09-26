@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MicButton, type VoiceIntentResult } from "@/components/voice/mic-button";
 
 interface ChapterOption {
   id: string;
@@ -67,6 +68,41 @@ export function NewKitForm({ chapters, classrooms }: { chapters: ChapterOption[]
   const [scheduledFor, setScheduledFor] = useState("");
   const [includeParentNote, setIncludeParentNote] = useState(true); // F49 is on
   const [teacherNote, setTeacherNote] = useState("");
+  const [activeTab, setActiveTab] = useState<"chapter" | "topic">("chapter");
+
+  // F31: "Speaking Hindi fills the form" — try to match a seeded chapter first,
+  // fall back to the typed-topic tab when there's no exact grade+subject+chapterNo match.
+  function handleVoiceIntent(intent: VoiceIntentResult) {
+    if (intent.language) setLanguage(intent.language);
+
+    if (intent.grade && intent.subject) {
+      const matchedGrade = grades.find((g) => g === intent.grade);
+      const subjectsForGrade = matchedGrade
+        ? Array.from(new Set(chapters.filter((c) => c.grade === matchedGrade).map((c) => c.subject)))
+        : [];
+      const matchedSubject = subjectsForGrade.find((s) => s.toLowerCase() === intent.subject?.toLowerCase());
+      const matchedChapter =
+        matchedGrade && matchedSubject && intent.chapterNo
+          ? chapters.find((c) => c.grade === matchedGrade && c.subject === matchedSubject && c.chapterNo === intent.chapterNo)
+          : undefined;
+
+      if (matchedChapter) {
+        setGrade(matchedGrade);
+        setSubject(matchedSubject);
+        setChapterId(matchedChapter.id);
+        setActiveTab("chapter");
+        toast.success("Filled from voice");
+        return;
+      }
+    }
+
+    if (intent.grade) setTopicGrade(intent.grade);
+    if (intent.subject) setTopicSubject(intent.subject);
+    if (intent.topic) setTopic(intent.topic);
+    if (intent.teacherNote) setTeacherNote(intent.teacherNote);
+    setActiveTab("topic");
+    toast.success("Filled from voice");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -107,9 +143,12 @@ export function NewKitForm({ chapters, classrooms }: { chapters: ChapterOption[]
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">New lesson kit</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">New lesson kit</h1>
+        <MicButton onIntent={handleVoiceIntent} />
+      </div>
 
-      <Tabs defaultValue="chapter">
+      <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v as "chapter" | "topic")}>
         <TabsList>
           <TabsTrigger value="chapter">Pick chapter</TabsTrigger>
           <TabsTrigger value="topic">Type topic</TabsTrigger>
