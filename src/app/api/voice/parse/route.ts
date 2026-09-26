@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import * as z from "zod";
-import { requireTeacher } from "@/lib/session";
+import { getAuthedTeacher } from "@/lib/session";
 import { generateJSON, MODEL_FAST } from "@/lib/ai/gemini";
 import { VoiceIntent } from "@/lib/ai/schemas";
 import { buildVoiceParsePrompt } from "@/lib/ai/prompts/voice";
@@ -15,7 +15,8 @@ export const maxDuration = 30;
 const bodySchema = z.object({ transcript: z.string().min(1).max(500) });
 
 export async function POST(req: Request) {
-  await requireTeacher(); // redirects to /login on no session — not try/catch-wrapped
+  const teacher = await getAuthedTeacher();
+  if (!teacher) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   const parsedBody = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsedBody.success) {

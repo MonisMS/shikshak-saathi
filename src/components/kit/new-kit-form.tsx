@@ -72,7 +72,9 @@ export function NewKitForm({ chapters, classrooms }: { chapters: ChapterOption[]
     e.preventDefault();
     setSubmitting(true);
 
-    const sections = ["OBJECTIVES", "LESSON_PLAN", "WORKSHEET", "EXIT_QUIZ", ...(includeParentNote ? ["PARENT_NOTE"] : [])];
+    // OBJECTIVES/LESSON_PLAN are added server-side automatically (Ujjwal's POST /api/kits
+    // treats them as always-on) — only send the optional ones here.
+    const sections = ["WORKSHEET", "EXIT_QUIZ", ...(includeParentNote ? ["PARENT_NOTE"] : [])];
 
     const body: Record<string, unknown> = {
       classroomId,
@@ -82,7 +84,8 @@ export function NewKitForm({ chapters, classrooms }: { chapters: ChapterOption[]
       lowResource,
       sections,
       teacherNote: teacherNote || undefined,
-      scheduledFor: scheduledFor || undefined,
+      // POST /api/kits requires a full ISO datetime (z.string().datetime()), not a bare date.
+      scheduledFor: scheduledFor ? new Date(`${scheduledFor}T00:00:00.000Z`).toISOString() : undefined,
       ...(chapterId ? { chapterId } : { topic, grade: topicGrade, subject: topicSubject }),
     };
 

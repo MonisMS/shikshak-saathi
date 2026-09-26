@@ -61,5 +61,8 @@ export function chapterOrTopicBlock(ctx: PromptContext): string {
   if (ctx.chapterText) {
     return `<chapter>\n${ctx.chapterText}\n</chapter>`;
   }
-  return `<topic>\n${ctx.topic ?? "(no topic given)"}\n</topic>\n\nThere is no source chapter for this kit — leave every pageRef field empty/omitted.`;
+  // Objectives.pageRefs is required (min 1) even for typed-topic kits (§10.4 only made
+  // worksheet/quiz pageRef optional) — so only tell the model to omit it where the
+  // schema actually allows omitting it, instead of a blanket claim that doesn't hold.
+  return `<topic>\n${ctx.topic ?? "(no topic given)"}\n</topic>\n\nThere is no source chapter for this kit. Leave every OPTIONAL pageRef field (worksheet questions, quiz questions) empty/omitted. Objectives still require at least one pageRef each — since there is no chapter, use 1 as a placeholder page number for every objective rather than inventing a specific-looking page.`;
 }

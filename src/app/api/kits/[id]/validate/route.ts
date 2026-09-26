@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireTeacher } from "@/lib/session";
+import { getAuthedTeacher } from "@/lib/session";
 import { getKitForTeacher } from "@/lib/scope";
 import { RevisionSource, SectionStatus, SectionType, type Prisma } from "@/generated/prisma/client";
 import { Objectives, LessonPlan, Worksheet, Quiz, MultiGrade } from "@/lib/ai/schemas";
@@ -19,8 +19,8 @@ import type { z } from "zod";
  * schedule explicitly lists "+ /validate route" under Monis's M7 — built here per that
  * more specific instruction. Flagging this in case Ujjwal was also about to touch this path.
  *
- * See api/kits/[id]/sections/[type]/route.ts for why `requireTeacher()` is not
- * try/catch-wrapped while `getKitForTeacher()` is.
+ * See api/kits/[id]/sections/[type]/route.ts for why this uses `getAuthedTeacher()`
+ * rather than `requireTeacher()`.
  */
 
 export const maxDuration = 30;
@@ -39,7 +39,8 @@ function parseSection<T>(
 export async function POST(_req: Request, ctx: RouteContext<"/api/kits/[id]/validate">) {
   const { id: kitId } = await ctx.params;
 
-  const teacher = await requireTeacher(); // must not be try/catch-wrapped — redirect() must propagate
+  const teacher = await getAuthedTeacher();
+  if (!teacher) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   const teacherId = teacher.id;
 
   let kit;

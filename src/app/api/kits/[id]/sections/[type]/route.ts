@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import * as z from "zod";
 import { prisma } from "@/lib/db";
-import { requireTeacher } from "@/lib/session";
+import { getAuthedTeacher } from "@/lib/session";
 import { getKitForTeacher } from "@/lib/scope";
 import { toPromptText, type ChapterPage } from "@/lib/chapters";
 import {
@@ -26,10 +26,11 @@ import type { PromptContext } from "@/lib/ai/prompts/context";
  * in parallel. The same endpoint handles "regenerate with an instruction" (F20) and
  * the one-shot validator repair round (§10.6) via the request body.
  *
- * `requireTeacher()` (src/lib/session.ts) redirects to /login on no session — it is
- * intentionally NOT wrapped in try/catch (see the comment at each call site).
- * `getKitForTeacher()` (src/lib/scope.ts) throws a plain `NotFoundError` when the kit
- * doesn't exist or isn't owned by this teacher; that IS safe to try/catch → 404.
+ * `getAuthedTeacher()` (src/lib/session.ts) returns the teacher or null (never
+ * redirects) — the right choice for API routes, where a redirect() response isn't
+ * something a fetch() caller can treat as JSON. `getKitForTeacher()` (src/lib/scope.ts)
+ * throws a plain `NotFoundError` when the kit doesn't exist or isn't owned by this
+ * teacher; safe to try/catch → 404.
  */
 
 export const maxDuration = 60;
@@ -62,10 +63,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
   }
   const sectionType = type;
 
-  // requireTeacher() redirects to /login internally on no session — must NOT be
-  // wrapped in try/catch (Next's own docs: redirect() throws and must propagate,
-  // in Route Handlers too, not just pages).
-  const teacher = await requireTeacher();
+  const teacher = await getAuthedTeacher();
+  if (!teacher) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   const teacherId = teacher.id;
 
   let kit;
@@ -228,7 +227,8 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/kits/[id]/sect
   }
   const sectionType = type;
 
-  const teacher = await requireTeacher(); // must not be try/catch-wrapped — see the POST handler above
+  const teacher = await getAuthedTeacher();
+  if (!teacher) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   const teacherId = teacher.id;
 
   let kit;
