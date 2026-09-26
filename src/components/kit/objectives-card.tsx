@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ListEditor } from "./list-editor";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx } from "@/lib/i18n";
 
 const BLOOM_COLOR: Record<string, string> = {
   remember: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300",
@@ -44,6 +46,7 @@ export function ObjectivesCard({
   data: ObjectivesData;
   onSave?: (next: ObjectivesData) => Promise<void>;
 }) {
+  const { lang } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ObjectivesData>(data);
   const [saving, setSaving] = useState(false);
@@ -67,11 +70,11 @@ export function ObjectivesCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Learning objectives</CardTitle>
+          <CardTitle>{tx(lang, "Learning objectives", "सीखने के उद्देश्य")}</CardTitle>
           {onSave && (
             <CardAction>
               <Button variant="outline" size="sm" onClick={startEdit}>
-                Edit
+                {tx(lang, "Edit", "संपादित करें")}
               </Button>
             </CardAction>
           )}
@@ -102,11 +105,11 @@ export function ObjectivesCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Learning objectives (editing)</CardTitle>
+        <CardTitle>{tx(lang, "Learning objectives (editing)", "सीखने के उद्देश्य (संपादन)")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1">
-          <Label>Chapter summary</Label>
+          <Label>{tx(lang, "Chapter summary", "अध्याय सारांश")}</Label>
           <Textarea
             value={draft.chapterSummary}
             maxLength={600}
@@ -124,7 +127,7 @@ export function ObjectivesCard({
             competency: "",
             pageRefs: [],
           })}
-          addLabel="Add objective"
+          addLabel={tx(lang, "Add objective", "उद्देश्य जोड़ें")}
           renderItem={(o, onChange) => (
             <>
               <div className="flex items-center gap-2">
@@ -138,14 +141,14 @@ export function ObjectivesCard({
                   </SelectContent>
                 </Select>
               </div>
-              <Textarea value={o.text} onChange={(e) => onChange({ ...o, text: e.target.value })} placeholder="Students will be able to…" />
-              <Input value={o.competency} onChange={(e) => onChange({ ...o, competency: e.target.value })} placeholder="NCF/NEP competency" />
+              <Textarea value={o.text} onChange={(e) => onChange({ ...o, text: e.target.value })} placeholder={tx(lang, "Students will be able to…", "विद्यार्थी … कर सकेंगे")} />
+              <Input value={o.competency} onChange={(e) => onChange({ ...o, competency: e.target.value })} placeholder={tx(lang, "NCF/NEP competency", "NCF/NEP दक्षता")} />
               <Input
                 value={o.pageRefs.join(", ")}
                 onChange={(e) =>
                   onChange({ ...o, pageRefs: e.target.value.split(",").map((s) => Number(s.trim())).filter((n) => !Number.isNaN(n)) })
                 }
-                placeholder="Page refs, comma separated"
+                placeholder={tx(lang, "Page refs, comma separated", "पृष्ठ संख्या, कॉमा से अलग")}
               />
             </>
           )}
@@ -153,10 +156,10 @@ export function ObjectivesCard({
 
         <div className="flex gap-2">
           <Button size="sm" onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? tx(lang, "Saving…", "सहेजा जा रहा है…") : tx(lang, "Save", "सहेजें")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
-            Cancel
+            {tx(lang, "Cancel", "रद्द करें")}
           </Button>
         </div>
       </CardContent>

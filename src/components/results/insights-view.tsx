@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FadeIn } from "@/components/motion/fade-in";
 import type { MisconceptionCountRow, ObjectiveMasteryRow, QuestionAccuracyRow, MasteryBand } from "@/lib/misconceptions";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx, type Lang } from "@/lib/i18n";
 
 const BAND_COLOR: Record<MasteryBand, string> = {
   green: "bg-emerald-500",
@@ -16,11 +18,11 @@ const BAND_COLOR: Record<MasteryBand, string> = {
   red: "bg-rose-500",
 };
 // Band label always shown alongside the bar so understanding is never read from color alone.
-const BAND_LABEL: Record<MasteryBand, string> = {
-  green: "Strong",
-  amber: "Worth revisiting",
-  red: "Needs another explanation",
-};
+const BAND_LABEL = (lang: Lang): Record<MasteryBand, string> => ({
+  green: tx(lang, "Strong", "मज़बूत"),
+  amber: tx(lang, "Worth revisiting", "दोबारा देखना अच्छा रहेगा"),
+  red: tx(lang, "Needs another explanation", "फिर से समझाने की ज़रूरत"),
+});
 
 function Bar({ label, pct, colorClass, bandLabel }: { label: string; pct: number; colorClass: string; bandLabel?: string }) {
   return (
@@ -61,6 +63,7 @@ export function InsightsView({
   accuracy: QuestionAccuracyRow[];
   mastery: ObjectiveMasteryRow[];
 }) {
+  const { lang } = useLanguage();
   const [fixing, setFixing] = useState(false);
   const [targetKitId, setTargetKitId] = useState<string | null>(null);
 
@@ -75,9 +78,9 @@ export function InsightsView({
       if (!res.ok) throw new Error((data as { error?: string })?.error ?? `Failed (${res.status})`);
       const { targetKitId: nextId } = data as { targetKitId?: string };
       setTargetKitId(nextId ?? null);
-      toast.success("5-minute fix added to tomorrow's kit");
+      toast.success(tx(lang, "5-minute fix added to tomorrow's kit", "कल की किट में 5 मिनट का सुधार जोड़ दिया गया"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not generate the fix");
+      toast.error(e instanceof Error ? e.message : tx(lang, "Could not generate the fix", "सुधार नहीं बन सका"));
     } finally {
       setFixing(false);
     }
@@ -86,28 +89,28 @@ export function InsightsView({
   return (
     <div className="max-w-2xl space-y-8">
       <FadeIn>
-        <h1 className="text-2xl font-semibold tracking-tight">{title} — Understanding</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{title} — {tx(lang, "Understanding", "समझ")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Based on today&apos;s quick check. Nothing here identifies individual students.
+          {tx(lang, "Based on today's quick check. Nothing here identifies individual students.", "आज की छोटी जाँच के आधार पर. इसमें किसी छात्र की पहचान नहीं है.")}
         </p>
       </FadeIn>
 
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground">How the class understood it</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{tx(lang, "How the class understood it", "कक्षा ने कितना समझा")}</h2>
 
         <FadeIn index={1}>
           <Card className="border-border/70">
             <CardHeader>
-              <CardTitle className="text-base">Common wrong answers may indicate…</CardTitle>
+              <CardTitle className="text-base">{tx(lang, "Common wrong answers may indicate…", "आम गलत उत्तर ये गलतफ़हमियाँ दिखा सकते हैं…")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {misconceptions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No recurring misconception showed up in this quiz&apos;s wrong answers.</p>
+                <p className="text-sm text-muted-foreground">{tx(lang, "No recurring misconception showed up in this quiz's wrong answers.", "इस प्रश्नोत्तरी के गलत उत्तरों में कोई बार-बार आने वाली गलतफ़हमी नहीं दिखी.")}</p>
               ) : (
                 misconceptions.map((m) => (
                   <div key={m.code} className="space-y-1">
-                    <Bar label={`${m.studentCount} students · ${m.label}`} pct={m.percent} colorClass="bg-rose-400" />
-                    <p className="text-xs text-muted-foreground">may indicate this — worth revisiting: {m.correction}</p>
+                    <Bar label={`${m.studentCount} ${tx(lang, "students", "छात्र")} · ${m.label}`} pct={m.percent} colorClass="bg-rose-400" />
+                    <p className="text-xs text-muted-foreground">{tx(lang, "may indicate this — worth revisiting:", "यह गलतफ़हमी हो सकती है — दोबारा समझाएँ:")} {m.correction}</p>
                   </div>
                 ))
               )}
@@ -118,11 +121,11 @@ export function InsightsView({
         <FadeIn index={2}>
           <Card className="border-border/70">
             <CardHeader>
-              <CardTitle className="text-base">Per-question accuracy</CardTitle>
+              <CardTitle className="text-base">{tx(lang, "Per-question accuracy", "हर प्रश्न की सटीकता")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {accuracy.map((a, i) => (
-                <Bar key={a.questionId} label={`Q${i + 1}`} pct={a.accuracy} colorClass={BAND_COLOR[bandFor(a.accuracy)]} bandLabel={BAND_LABEL[bandFor(a.accuracy)]} />
+                <Bar key={a.questionId} label={`Q${i + 1}`} pct={a.accuracy} colorClass={BAND_COLOR[bandFor(a.accuracy)]} bandLabel={BAND_LABEL(lang)[bandFor(a.accuracy)]} />
               ))}
             </CardContent>
           </Card>
@@ -131,11 +134,11 @@ export function InsightsView({
         <FadeIn index={3}>
           <Card className="border-border/70">
             <CardHeader>
-              <CardTitle className="text-base">Per-objective mastery</CardTitle>
+              <CardTitle className="text-base">{tx(lang, "Per-objective mastery", "हर उद्देश्य की पकड़")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {mastery.map((m) => (
-                <Bar key={m.objectiveId} label={m.objectiveId} pct={m.accuracy} colorClass={BAND_COLOR[m.band]} bandLabel={BAND_LABEL[m.band]} />
+                <Bar key={m.objectiveId} label={m.objectiveId} pct={m.accuracy} colorClass={BAND_COLOR[m.band]} bandLabel={BAND_LABEL(lang)[m.band]} />
               ))}
             </CardContent>
           </Card>
@@ -144,11 +147,11 @@ export function InsightsView({
 
       {eligible.length > 0 && (
         <FadeIn index={4} className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">Plan next lesson</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">{tx(lang, "Plan next lesson", "अगला पाठ तैयार करें")}</h2>
           <Card className="border-border/70">
             <CardContent className="space-y-3 pt-6">
               <p className="text-sm text-muted-foreground">
-                A short reteaching activity for the misconceptions above, ready to drop into tomorrow&apos;s kit.
+                {tx(lang, "A short reteaching activity for the misconceptions above, ready to drop into tomorrow's kit.", "ऊपर की गलतफ़हमियों के लिए दोबारा समझाने की छोटी गतिविधि, कल की किट में जोड़ने के लिए तैयार.")}
               </p>
               <ul className="space-y-2">
                 {eligible.map((m) => (
@@ -160,11 +163,11 @@ export function InsightsView({
               </ul>
               <div className="space-y-2 pt-1">
                 <Button onClick={addFix} disabled={fixing || !!targetKitId} size="lg">
-                  {fixing ? "Generating…" : targetKitId ? "Fix added" : "Add 5-min fix to tomorrow"}
+                  {fixing ? tx(lang, "Generating…", "बना रहे हैं…") : targetKitId ? tx(lang, "Fix added", "सुधार जोड़ दिया") : tx(lang, "Add 5-min fix to tomorrow", "कल के लिए 5 मिनट का सुधार जोड़ें")}
                 </Button>
                 {targetKitId && (
                   <Link href={`/kits/${targetKitId}`} className="block text-sm underline">
-                    Open tomorrow&apos;s kit
+                    {tx(lang, "Open tomorrow's kit", "कल की किट खोलें")}
                   </Link>
                 )}
               </div>

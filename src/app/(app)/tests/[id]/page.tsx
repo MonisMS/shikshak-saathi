@@ -31,6 +31,7 @@ export default async function TestDetailPage(props: PageProps<"/tests/[id]">) {
       submissions={publication.submissions.map((s) => ({
         id: s.id,
         studentName: s.studentName,
+        source: s.source,
         answers: s.answers as Record<string, string>,
         perQuestion: (s.perQuestion as unknown as Record<string, PerQuestionResult>) ?? {},
         autoMarks: s.autoMarks,

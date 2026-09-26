@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { STATUS_CHIP, statusChipKey } from "./status-chip";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx } from "@/lib/i18n";
 
 export interface KitRow {
   id: string;
@@ -33,15 +35,20 @@ export function KitsListView({
   initialKits,
   classrooms,
   initialSearch = "",
+  initialClassroom,
 }: {
   initialKits: KitRow[];
   classrooms: ClassroomOption[];
   initialSearch?: string;
+  initialClassroom?: string;
 }) {
   const router = useRouter();
+  const { lang } = useLanguage();
   const [kits, setKits] = useState(initialKits);
   const [search, setSearch] = useState(initialSearch);
-  const [classroomFilter, setClassroomFilter] = useState<string | undefined>(undefined);
+  const [classroomFilter, setClassroomFilter] = useState<string | undefined>(
+    classrooms.some((c) => c.id === initialClassroom) ? initialClassroom : undefined,
+  );
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -62,16 +69,16 @@ export function KitsListView({
       const res = await fetch(`/api/kits/${id}/duplicate`, { method: "POST" });
       const data: unknown = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string })?.error ?? `Failed (${res.status})`);
-      toast.success("Kit duplicated");
+      toast.success(tx(lang, "Kit duplicated", "किट की कॉपी बन गई"));
       router.push(`/kits/${(data as { id: string }).id}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not duplicate");
+      toast.error(e instanceof Error ? e.message : tx(lang, "Could not duplicate", "कॉपी नहीं बन सकी"));
       setBusyId(null);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this kit? This cannot be undone.")) return;
+    if (!confirm(tx(lang, "Delete this kit? This cannot be undone.", "यह किट हटाएँ? यह वापस नहीं होगा."))) return;
     setBusyId(id);
     try {
       const res = await fetch(`/api/kits/${id}`, { method: "DELETE" });
@@ -80,9 +87,9 @@ export function KitsListView({
         throw new Error((data as { error?: string })?.error ?? `Failed (${res.status})`);
       }
       setKits((prev) => prev.filter((k) => k.id !== id));
-      toast.success("Kit deleted");
+      toast.success(tx(lang, "Kit deleted", "किट हटा दी गई"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not delete");
+      toast.error(e instanceof Error ? e.message : tx(lang, "Could not delete", "हटाया नहीं जा सका"));
     } finally {
       setBusyId(null);
     }
@@ -92,13 +99,13 @@ export function KitsListView({
 
   return (
     <div className="max-w-3xl space-y-4">
-      <h1 className="text-2xl font-semibold">My kits</h1>
+      <h1 className="text-2xl font-semibold">{tx(lang, "My kits", "मेरी किट्स")}</h1>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Input placeholder="Search kits…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+        <Input placeholder={tx(lang, "Search kits…", "किट खोजें…")} value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
         <Select items={classrooms.map((c) => ({ value: c.id, label: c.name }))} value={classroomFilter} onValueChange={(v) => setClassroomFilter(v ?? undefined)}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="All classrooms" />
+            <SelectValue placeholder={tx(lang, "All classrooms", "सभी कक्षाएँ")} />
           </SelectTrigger>
           <SelectContent>
             {classrooms.map((c) => (
@@ -108,14 +115,14 @@ export function KitsListView({
             ))}
           </SelectContent>
         </Select>
-        <Select items={STATUS_OPTIONS.map((s) => ({ value: s, label: STATUS_CHIP[s].label }))} value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? undefined)}>
+        <Select items={STATUS_OPTIONS.map((s) => ({ value: s, label: STATUS_CHIP[s].label[lang] }))} value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? undefined)}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="All statuses" />
+            <SelectValue placeholder={tx(lang, "All statuses", "सभी स्थितियाँ")} />
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((s) => (
               <SelectItem key={s} value={s}>
-                {STATUS_CHIP[s].label}
+                {STATUS_CHIP[s].label[lang]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -130,13 +137,13 @@ export function KitsListView({
               setStatusFilter(undefined);
             }}
           >
-            Clear
+            {tx(lang, "Clear", "साफ़ करें")}
           </Button>
         )}
       </div>
 
       <div className="space-y-2">
-        {filtered.length === 0 && <p className="text-sm text-muted-foreground">No kits match.</p>}
+        {filtered.length === 0 && <p className="text-sm text-muted-foreground">{tx(lang, "No kits match.", "कोई किट नहीं मिली.")}</p>}
         {filtered.map((k) => {
           const chip = STATUS_CHIP[statusChipKey(k.status, k.hasResults)] ?? STATUS_CHIP.DRAFT;
           return (
@@ -147,19 +154,19 @@ export function KitsListView({
                     {k.title}
                   </Link>
                   <p className="text-xs text-muted-foreground">
-                    {k.classroomName ?? "No classroom"}
+                    {k.classroomName ?? tx(lang, "No classroom", "कोई कक्षा नहीं")}
                     {k.subject ? ` · ${k.subject}` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant="secondary" className={chip.className}>
-                    {chip.label}
+                    {chip.label[lang]}
                   </Badge>
                   <Button size="sm" variant="outline" disabled={busyId === k.id} onClick={() => handleDuplicate(k.id)}>
-                    Duplicate
+                    {tx(lang, "Duplicate", "कॉपी बनाएँ")}
                   </Button>
                   <Button size="sm" variant="outline" disabled={busyId === k.id} onClick={() => handleDelete(k.id)}>
-                    Delete
+                    {tx(lang, "Delete", "हटाएँ")}
                   </Button>
                 </div>
               </CardContent>

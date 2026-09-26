@@ -12,23 +12,33 @@ import { Label } from "@/components/ui/label";
 import { FadeIn } from "@/components/motion/fade-in";
 import type { ResourceGroup, ResourceListItem } from "@/lib/resources";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx, type Lang } from "@/lib/i18n";
 
-const COPY: Record<ResourceGroup, { title: string; subtitle: string; accept: string; hint: string; empty: string }> = {
+const COPY = (lang: Lang): Record<ResourceGroup, { title: string; subtitle: string; accept: string; hint: string; empty: string }> => ({
   documents: {
-    title: "Resources",
-    subtitle: "Textbook chapters, PDFs, worksheets and photos of pages — ready to build a kit from.",
+    title: tx(lang, "Resources", "संसाधन"),
+    subtitle: tx(
+      lang,
+      "Textbook chapters, PDFs, worksheets and photos of pages — ready to build a kit from.",
+      "पाठ्यपुस्तक के अध्याय, PDF, वर्कशीट और पन्नों की फ़ोटो — इनसे किट बनाने के लिए तैयार.",
+    ),
     accept: ".pdf,.docx,.txt,image/*",
-    hint: "PDF, Word (.docx), .txt, or several photos of textbook pages (read with OCR)",
-    empty: "No resources yet. Upload a chapter PDF or photos of the textbook pages.",
+    hint: tx(lang, "PDF, Word (.docx), .txt, or several photos of textbook pages (read with OCR)", "PDF, Word (.docx), .txt, या पाठ्यपुस्तक के पन्नों की कई फ़ोटो (OCR से पढ़ी जाएँगी)"),
+    empty: tx(lang, "No resources yet. Upload a chapter PDF or photos of the textbook pages.", "अभी कोई संसाधन नहीं. किसी अध्याय की PDF या पाठ्यपुस्तक के पन्नों की फ़ोटो अपलोड करें."),
   },
   recordings: {
-    title: "Recordings",
-    subtitle: "Your class and teaching recordings, transcribed — use what you actually said in class to plan the next lesson.",
+    title: tx(lang, "Recordings", "रिकॉर्डिंग"),
+    subtitle: tx(
+      lang,
+      "Your class and teaching recordings, transcribed — use what you actually said in class to plan the next lesson.",
+      "आपकी कक्षा की रिकॉर्डिंग, लिखित रूप में — कक्षा में जो आपने कहा, उसी से अगला पाठ बनाएँ.",
+    ),
     accept: "audio/*,.mp3,.m4a,.wav,.ogg,.webm",
-    hint: "Audio files (mp3, m4a, wav, webm) — transcribed automatically in Hindi or English",
-    empty: "No recordings yet. Upload a class recording to transcribe it.",
+    hint: tx(lang, "Audio files (mp3, m4a, wav, webm) — transcribed automatically in Hindi or English", "ऑडियो फ़ाइलें (mp3, m4a, wav, webm) — हिंदी या अंग्रेज़ी में अपने-आप लिखी जाएँगी"),
+    empty: tx(lang, "No recordings yet. Upload a class recording to transcribe it.", "अभी कोई रिकॉर्डिंग नहीं. कक्षा की रिकॉर्डिंग अपलोड करें."),
   },
-};
+});
 
 function KindIcon({ kind }: { kind: string }) {
   const Icon = kind === "audio" ? AudioLines : kind === "image" ? ImageIcon : FileText;
@@ -40,20 +50,21 @@ function KindIcon({ kind }: { kind: string }) {
   );
 }
 
-function meta(r: ResourceListItem) {
+function meta(r: ResourceListItem, lang: Lang) {
   const parts: string[] = [];
-  if (r.grade) parts.push(`Class ${r.grade}`);
+  if (r.grade) parts.push(tx(lang, `Class ${r.grade}`, `कक्षा ${r.grade}`));
   if (r.subject) parts.push(r.subject);
   if (r.kind === "audio") {
-    if (r.audioSeconds) parts.push(`${Math.round(r.audioSeconds / 60)} min`);
-    parts.push("Transcript");
+    if (r.audioSeconds) parts.push(tx(lang, `${Math.round(r.audioSeconds / 60)} min`, `${Math.round(r.audioSeconds / 60)} मिनट`));
+    parts.push(tx(lang, "Transcript", "ट्रांसक्रिप्ट"));
   } else {
-    parts.push(`${r.kind.toUpperCase()} · ${r.pageCount} page${r.pageCount === 1 ? "" : "s"}`);
+    parts.push(tx(lang, `${r.kind.toUpperCase()} · ${r.pageCount} page${r.pageCount === 1 ? "" : "s"}`, `${r.kind.toUpperCase()} · ${r.pageCount} पन्ने`));
   }
   return parts.join(" · ");
 }
 
 function ResourceCard({ r, onDeleted }: { r: ResourceListItem; onDeleted: (id: string) => void }) {
+  const { lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [full, setFull] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -74,10 +85,10 @@ function ResourceCard({ r, onDeleted }: { r: ResourceListItem; onDeleted: (id: s
   }
 
   async function remove() {
-    if (!confirm(`Delete “${r.title}”?`)) return;
+    if (!confirm(tx(lang, `Delete “${r.title}”?`, `“${r.title}” हटाएँ?`))) return;
     const res = await fetch(`/api/resources/${r.id}`, { method: "DELETE" });
     if (res.ok) onDeleted(r.id);
-    else toast.error("Could not delete");
+    else toast.error(tx(lang, "Could not delete", "हटाया नहीं जा सका"));
   }
 
   return (
@@ -86,7 +97,7 @@ function ResourceCard({ r, onDeleted }: { r: ResourceListItem; onDeleted: (id: s
         <KindIcon kind={r.kind} />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{r.title}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{meta(r)}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{meta(r, lang)}</p>
           {!open && r.preview && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{r.preview}</p>}
         </div>
         <button type="button" onClick={remove} className="text-muted-foreground hover:text-destructive" aria-label={`Delete ${r.title}`}>
@@ -102,14 +113,14 @@ function ResourceCard({ r, onDeleted }: { r: ResourceListItem; onDeleted: (id: s
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Link href={`/kits/new?resource=${r.id}`} className={buttonVariants({ size: "sm" })}>
-          <Sparkles /> Make a kit from this
+          <Sparkles /> {tx(lang, "Make a kit from this", "इससे किट बनाएँ")}
         </Link>
         <Button size="sm" variant="outline" onClick={toggle}>
-          {open ? "Hide" : r.kind === "audio" ? "Read transcript" : "Read text"}
+          {open ? tx(lang, "Hide", "छिपाएँ") : r.kind === "audio" ? tx(lang, "Read transcript", "ट्रांसक्रिप्ट पढ़ें") : tx(lang, "Read text", "टेक्स्ट पढ़ें")}
         </Button>
         {r.sourceUrl && (
           <a href={r.sourceUrl} target="_blank" rel="noreferrer" className={buttonVariants({ size: "sm", variant: "ghost" })}>
-            <ExternalLink /> {r.kind === "audio" ? "Recording" : "Source"}
+            <ExternalLink /> {r.kind === "audio" ? tx(lang, "Recording", "रिकॉर्डिंग") : tx(lang, "Source", "स्रोत")}
           </a>
         )}
       </div>
@@ -118,6 +129,7 @@ function ResourceCard({ r, onDeleted }: { r: ResourceListItem; onDeleted: (id: s
 }
 
 function AddTranscript({ onAdded }: { onAdded: () => void }) {
+  const { lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -133,14 +145,14 @@ function AddTranscript({ onAdded }: { onAdded: () => void }) {
         body: JSON.stringify({ title, transcript, sourceUrl: url || undefined }),
       });
       const data: unknown = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((data as { error?: string })?.error ?? "Could not save");
+      if (!res.ok) throw new Error((data as { error?: string })?.error ?? tx(lang, "Could not save", "सहेजा नहीं जा सका"));
       setOpen(false);
       setTitle("");
       setUrl("");
       setTranscript("");
       onAdded();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      toast.error(e instanceof Error ? e.message : tx(lang, "Could not save", "सहेजा नहीं जा सका"));
     } finally {
       setSaving(false);
     }
@@ -149,7 +161,7 @@ function AddTranscript({ onAdded }: { onAdded: () => void }) {
   if (!open) {
     return (
       <Button variant="outline" onClick={() => setOpen(true)}>
-        <Plus /> Paste a transcript or audio link
+        <Plus /> {tx(lang, "Paste a transcript or audio link", "ट्रांसक्रिप्ट या ऑडियो लिंक चिपकाएँ")}
       </Button>
     );
   }
@@ -157,24 +169,24 @@ function AddTranscript({ onAdded }: { onAdded: () => void }) {
     <div className="space-y-3 rounded-3xl bg-card p-5 ring-1 ring-foreground/[0.04]">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Title</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. 7-A Science, 24 Sep — Litmus" />
+          <Label>{tx(lang, "Title", "शीर्षक")}</Label>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx(lang, "e.g. 7-A Science, 24 Sep — Litmus", "जैसे 7-A विज्ञान, 24 सितंबर — लिटमस")} />
         </div>
         <div className="space-y-1.5">
-          <Label>Audio link (optional)</Label>
+          <Label>{tx(lang, "Audio link (optional)", "ऑडियो लिंक (वैकल्पिक)")}</Label>
           <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label>Transcript</Label>
-        <Textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} rows={6} placeholder="Paste what was said in class…" />
+        <Label>{tx(lang, "Transcript", "ट्रांसक्रिप्ट")}</Label>
+        <Textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} rows={6} placeholder={tx(lang, "Paste what was said in class…", "कक्षा में जो कहा गया, यहाँ चिपकाएँ…")} />
       </div>
       <div className="flex gap-2">
         <Button onClick={save} disabled={saving || !title.trim() || !transcript.trim()}>
-          {saving ? "Saving…" : "Save recording"}
+          {saving ? tx(lang, "Saving…", "सहेज रहे हैं…") : tx(lang, "Save recording", "रिकॉर्डिंग सहेजें")}
         </Button>
         <Button variant="ghost" onClick={() => setOpen(false)}>
-          Cancel
+          {tx(lang, "Cancel", "रद्द करें")}
         </Button>
       </div>
     </div>
@@ -182,7 +194,8 @@ function AddTranscript({ onAdded }: { onAdded: () => void }) {
 }
 
 export function ResourceLibrary({ group, initial }: { group: ResourceGroup; initial: ResourceListItem[] }) {
-  const copy = COPY[group];
+  const { lang } = useLanguage();
+  const copy = COPY(lang)[group];
   const router = useRouter();
   const [items, setItems] = useState(initial);
   const [uploading, setUploading] = useState(false);
@@ -203,10 +216,10 @@ export function ResourceLibrary({ group, initial }: { group: ResourceGroup; init
       const res = await fetch("/api/resources", { method: "POST", body: form });
       const data: unknown = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string })?.error ?? `Failed (${res.status})`);
-      toast.success(group === "recordings" ? "Transcribed and saved" : "Saved to your resources");
+      toast.success(group === "recordings" ? tx(lang, "Transcribed and saved", "लिखकर सहेज लिया गया") : tx(lang, "Saved to your resources", "आपके संसाधनों में सहेजा गया"));
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
+      toast.error(e instanceof Error ? e.message : tx(lang, "Upload failed", "अपलोड नहीं हुआ"));
     } finally {
       setUploading(false);
     }
@@ -239,7 +252,13 @@ export function ResourceLibrary({ group, initial }: { group: ResourceGroup; init
         >
           {uploading ? <Loader2 className="size-7 animate-spin text-primary" /> : <FileUp className="size-7 text-primary" />}
           <span className="font-medium">
-            {uploading ? (group === "recordings" ? "Transcribing…" : "Reading your files…") : group === "recordings" ? "Upload class recordings" : "Upload resources"}
+            {uploading
+              ? group === "recordings"
+                ? tx(lang, "Transcribing…", "लिख रहे हैं…")
+                : tx(lang, "Reading your files…", "आपकी फ़ाइलें पढ़ रहे हैं…")
+              : group === "recordings"
+                ? tx(lang, "Upload class recordings", "कक्षा की रिकॉर्डिंग अपलोड करें")
+                : tx(lang, "Upload resources", "संसाधन अपलोड करें")}
           </span>
           <span className="text-xs text-muted-foreground">{copy.hint}</span>
           <input

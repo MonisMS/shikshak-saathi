@@ -52,6 +52,11 @@ enum ResultMethod {
   OMR
 }
 
+enum SubmissionSource {
+  ONLINE // student attempted via the /t/[token] link
+  SCAN // teacher printed the sheet, students filled it on paper, teacher uploaded a photo and it was OCR'd
+}
+
 enum MisconceptionStatus {
   OPEN
   FIX_PLANNED
@@ -103,13 +108,13 @@ model User {
   classrooms       Classroom[]
   kits             LessonKit[]
   activityLogs     ActivityLog[]
-  uploadedChapters Chapter[]         @relation("ChapterUploader")
+  uploadedChapters Chapter[]          @relation("ChapterUploader")
   generationLogs   GenerationLog[]
   classNotes       ClassNote[]
   testPublications TestPublication[]
+  resources        TeachingResource[]
 
   @@map("user")
-  resources      TeachingResource[]
 }
 
 model Session {
@@ -428,17 +433,18 @@ model TestPublication {
 /// long_answer, case_based, assertion_reason) sit ungraded until the teacher runs
 /// "Evaluate with AI".
 model TestSubmission {
-  id            String          @id @default(cuid())
+  id            String           @id @default(cuid())
   publicationId String
-  publication   TestPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  publication   TestPublication  @relation(fields: [publicationId], references: [id], onDelete: Cascade)
   studentName   String
+  source        SubmissionSource @default(ONLINE)
   answers       Json // { [questionId]: string }
   perQuestion   Json? // { [questionId]: { marks: number|null, max: number, method: "auto"|"ai", feedback?: string } }
-  autoMarks     Float           @default(0)
+  autoMarks     Float            @default(0)
   aiMarks       Float?
-  maxMarks      Float           @default(0)
+  maxMarks      Float            @default(0)
   evaluatedAt   DateTime?
-  submittedAt   DateTime        @default(now())
+  submittedAt   DateTime         @default(now())
 
   @@index([publicationId])
 }

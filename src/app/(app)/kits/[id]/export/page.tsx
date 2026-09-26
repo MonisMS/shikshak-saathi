@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/session";
+import { tx } from "@/lib/i18n";
 import { getKitForTeacher } from "@/lib/scope";
 import { SectionStatus, SectionType } from "@/generated/prisma/client";
 import { LessonPlan, Worksheet, Quiz, ParentNote } from "@/lib/ai/schemas";
@@ -11,18 +12,19 @@ import { buttonVariants } from "@/components/ui/button";
 import { ExportButtons } from "@/components/kit/export-buttons";
 import { ExitTicketShare } from "@/components/kit/exit-ticket-share";
 
-const DOC_LABEL: Record<DocKind, string> = {
-  plan: "Teacher's lesson plan",
-  worksheet: "Student worksheet",
-  answers: "Worksheet answer key",
-  quiz: "Exit quiz (student)",
-  quizkey: "Exit quiz answer key",
-  parent: "Parent note",
+const DOC_LABEL: Record<DocKind, { en: string; hi: string }> = {
+  plan: { en: "Teacher's lesson plan", hi: "शिक्षक की पाठ योजना" },
+  worksheet: { en: "Student worksheet", hi: "छात्र वर्कशीट" },
+  answers: { en: "Worksheet answer key", hi: "वर्कशीट उत्तर कुंजी" },
+  quiz: { en: "Exit quiz (student)", hi: "निकास प्रश्नोत्तरी (छात्र)" },
+  quizkey: { en: "Exit quiz answer key", hi: "निकास प्रश्नोत्तरी उत्तर कुंजी" },
+  parent: { en: "Parent note", hi: "अभिभावक संदेश" },
 };
 
 export default async function ExportPage(props: PageProps<"/kits/[id]/export">) {
   const { id } = await props.params;
   const teacher = await requireTeacher();
+  const lang = teacher.uiLanguage === "hi" ? "hi" : "en";
 
   let kit;
   try {
@@ -54,17 +56,17 @@ export default async function ExportPage(props: PageProps<"/kits/[id]/export">) 
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{kit.title} — Export</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{kit.title} — {tx(lang, "Export", "डाउनलोड / प्रिंट")}</h1>
 
       <Card className="border-border/70">
         <CardHeader>
-          <CardTitle className="text-base">Documents</CardTitle>
+          <CardTitle className="text-base">{tx(lang, "Documents", "दस्तावेज़")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {available.map((d) => (
             <div key={d.kind} className="flex items-center justify-between text-sm">
-              <span>{DOC_LABEL[d.kind]}</span>
-              <Badge variant={d.ready ? "secondary" : "outline"}>{d.ready ? "Ready" : "Not generated"}</Badge>
+              <span>{DOC_LABEL[d.kind][lang]}</span>
+              <Badge variant={d.ready ? "secondary" : "outline"}>{d.ready ? tx(lang, "Ready", "तैयार") : tx(lang, "Not generated", "नहीं बना")}</Badge>
             </div>
           ))}
         </CardContent>
@@ -72,10 +74,10 @@ export default async function ExportPage(props: PageProps<"/kits/[id]/export">) 
 
       <div className="flex flex-wrap items-center gap-3">
         <Link href={`/kits/${kit.id}/print?doc=all`} target="_blank" className={buttonVariants({ variant: "outline" })}>
-          Print / Save as PDF
+          {tx(lang, "Print / Save as PDF", "प्रिंट / PDF सहेजें")}
         </Link>
         <Link href={`/kits/${kit.id}/print?doc=worksheet&onepage=1`} target="_blank" className={buttonVariants({ variant: "outline" })}>
-          One-page worksheet (A4)
+          {tx(lang, "One-page worksheet (A4)", "एक पन्ने की वर्कशीट (A4)")}
         </Link>
         {readyDocs.length > 0 && (
           <ExportButtons
@@ -88,7 +90,7 @@ export default async function ExportPage(props: PageProps<"/kits/[id]/export">) 
 
       <Card className="border-border/70">
         <CardHeader>
-          <CardTitle className="text-base">Student exit ticket</CardTitle>
+          <CardTitle className="text-base">{tx(lang, "Student exit ticket", "छात्र निकास टिकट")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ExitTicketShare kitId={kit.id} />

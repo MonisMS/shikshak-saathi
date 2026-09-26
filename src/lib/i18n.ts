@@ -4,6 +4,9 @@
 
 export type Lang = "en" | "hi";
 
+/** Inline bilingual string: tx(lang, "Save", "सहेजें"). */
+export const tx = (lang: Lang, en: string, hi: string) => (lang === "hi" ? hi : en);
+
 export const dictionary = {
   en: {
     appName: "Shikshak Saathi",

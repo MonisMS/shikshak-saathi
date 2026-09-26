@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/session";
+import { tx } from "@/lib/i18n";
 import { getKitForTeacher } from "@/lib/scope";
 import { SectionStatus, SectionType } from "@/generated/prisma/client";
 import { ParentNote } from "@/lib/ai/schemas";
@@ -9,6 +10,7 @@ import { ParentNoteEditor } from "@/components/kit/parent-note-editor";
 export default async function ParentNotePage(props: PageProps<"/kits/[id]/parent">) {
   const { id } = await props.params;
   const teacher = await requireTeacher();
+  const lang = teacher.uiLanguage === "hi" ? "hi" : "en";
 
   let kit;
   try {
@@ -24,10 +26,14 @@ export default async function ParentNotePage(props: PageProps<"/kits/[id]/parent
     return (
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">
-          The parent note hasn&apos;t been generated yet — go back to the kit and add it, or wait for it to finish.
+          {tx(
+            lang,
+            "The parent note hasn't been generated yet — go back to the kit and add it, or wait for it to finish.",
+            "अभिभावक संदेश अभी नहीं बना है — किट पर वापस जाकर इसे बनाएँ, या पूरा होने तक रुकें.",
+          )}
         </p>
         <Link href={`/kits/${kit.id}`} className="text-sm underline">
-          Back to kit
+          {tx(lang, "Back to kit", "किट पर वापस")}
         </Link>
       </div>
     );

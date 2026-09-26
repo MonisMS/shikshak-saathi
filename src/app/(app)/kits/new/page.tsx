@@ -42,6 +42,7 @@ export default async function NewKitPage(props: PageProps<"/kits/new">) {
       chapters={chapters}
       classrooms={classrooms}
       library={library}
+      initialClassroomId={one(sp.classroom)}
       initialResourceIds={preselected && library.some((r) => r.id === preselected) ? [preselected] : []}
       initialIntent={hasInitialIntent ? initialIntent : undefined}
     />

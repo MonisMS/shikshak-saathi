@@ -18,12 +18,27 @@ import {
 } from "@/components/ui/select";
 import { MicButton, type VoiceIntentResult } from "@/components/voice/mic-button";
 import { FadeIn } from "@/components/motion/fade-in";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx } from "@/lib/i18n";
 import { FileUp, Loader2, X } from "lucide-react";
 import { NCERT_CATALOG } from "@/lib/ncert-catalog";
 import type { ResourceListItem } from "@/lib/resources";
 import { AudioLines, FileText } from "lucide-react";
 
 type SourceTab = "chapter" | "topic" | "upload";
+
+function normSubject(subject?: string): string | undefined {
+  if (!subject) return undefined;
+  const s = subject.trim().toLowerCase();
+  if (s.startsWith("math")) return "Maths";
+  if (s.startsWith("sci")) return "Science";
+  if (s.startsWith("social") || s === "sst") return "Social Science";
+  if (s.startsWith("eng")) return "English";
+  if (s.startsWith("hin")) return "Hindi";
+  if (s === "evs") return "EVS";
+  if (s.startsWith("sans")) return "Sanskrit";
+  return subject.trim();
+}
 const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
 const STANDARD_SUBJECTS = ["Science", "Maths", "English", "Hindi", "Social Science", "EVS", "Sanskrit"];
 const DOC_ACCEPT = ".pdf,.docx,.txt,image/*";
@@ -76,6 +91,7 @@ function SourceDropzone({
   accept: string;
   hint: string;
 }) {
+  const { lang: ui } = useLanguage();
   const [over, setOver] = useState(false);
   return (
     <label
@@ -94,7 +110,7 @@ function SourceDropzone({
       } ${disabled ? "pointer-events-none opacity-60" : ""}`}
     >
       <FileUp className="size-6 text-primary" />
-      <span className="text-sm font-medium">Drop files here or click to choose</span>
+      <span className="text-sm font-medium">{tx(ui, "Drop files here or click to choose", "फ़ाइलें यहाँ छोड़ें या चुनने के लिए क्लिक करें")}</span>
       <span className="text-xs text-muted-foreground">{hint}</span>
       <input
         type="file"
@@ -136,26 +152,30 @@ export function NewKitForm({
   initialIntent,
   library = [],
   initialResourceIds = [],
+  initialClassroomId,
 }: {
   chapters: ChapterOption[];
   classrooms: ClassroomOption[];
   library?: ResourceListItem[];
   initialResourceIds?: string[];
+  initialClassroomId?: string;
   /** Prefills the form from a voice intent handed off by the dashboard's mic (§6). */
   initialIntent?: VoiceIntentResult;
 }) {
   const router = useRouter();
+  const { lang: ui } = useLanguage();
   const [submitting, setSubmitting] = useState(false);
 
   const [language, setLanguage] = useState<"hi" | "en">("hi");
 
   // Class + subject are shared by all three source tabs.
-  const [grade, setGrade] = useState<number>(chapters[0]?.grade ?? classrooms[0]?.grades[0] ?? 7);
+  const startClassroom = classrooms.find((c) => c.id === initialClassroomId) ?? classrooms[0];
+  const [grade, setGrade] = useState<number>(startClassroom?.grades[0] ?? chapters[0]?.grade ?? 7);
   const subjects = useMemo(
     () => Array.from(new Set([...STANDARD_SUBJECTS, ...chapters.map((c) => c.subject)])),
     [chapters],
   );
-  const [subject, setSubject] = useState<string>(chapters[0]?.subject ?? "Science");
+  const [subject, setSubject] = useState<string>(normSubject(startClassroom?.subject) ?? chapters[0]?.subject ?? "Science");
   const optionsFor = (g: number, subj: string): ChapterPick[] => chapterOptions(chapters, g, subj, language);
   const chaptersForSubject = optionsFor(grade, subject);
   const [chapterId, setChapterId] = useState<string | undefined>(() => chapterOptions(chapters, grade, subject, "hi")[0]?.value);
@@ -178,7 +198,7 @@ export function NewKitForm({
     try {
       setSourcePages(await extractPages(next));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not read the files");
+      toast.error(err instanceof Error ? err.message : tx(ui, "Could not read the files", "फ़ाइलें पढ़ी नहीं जा सकीं"));
     } finally {
       setReading(false);
     }
@@ -202,7 +222,7 @@ export function NewKitForm({
     try {
       setAudioPages(await extractPages([file]));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not transcribe the audio");
+      toast.error(err instanceof Error ? err.message : tx(ui, "Could not transcribe the audio", "ऑडियो का ट्रांसक्रिप्ट नहीं बन सका"));
       setAudioFile(null);
     } finally {
       setReadingAudio(false);
@@ -210,11 +230,23 @@ export function NewKitForm({
   }
 
   // Shared options
-  const [classroomId, setClassroomId] = useState<string | undefined>(classrooms[0]?.id);
+  const [classroomId, setClassroomId] = useState<string | undefined>(startClassroom?.id);
   const classroom = classrooms.find((c) => c.id === classroomId);
   const [periodMinutes, setPeriodMinutes] = useState(40);
   const [classSize, setClassSize] = useState(classroom?.studentCount ?? 40);
   const [lowResource, setLowResource] = useState(classroom?.lowResource ?? true);
+  function pickClassroom(id: string | undefined) {
+    setClassroomId(id);
+    const c = classrooms.find((x) => x.id === id);
+    if (!c) return;
+    const g = c.grades[0] ?? grade;
+    const subj = normSubject(c.subject) ?? subject;
+    setGrade(g);
+    setSubject(subj);
+    setChapterId(optionsFor(g, subj)[0]?.value);
+    setClassSize(c.studentCount);
+    setLowResource(c.lowResource);
+  }
   const [scheduledFor, setScheduledFor] = useState("");
   const [teacherNote, setTeacherNote] = useState("");
   const [activeTab, setActiveTab] = useState<SourceTab>(initialResourceIds.length ? "upload" : "chapter");
@@ -239,7 +271,7 @@ export function NewKitForm({
       if (intent.topic) setTopic(intent.topic);
       setActiveTab("topic");
     }
-    toast.success("Filled from voice");
+    toast.success(tx(ui, "Filled from voice", "आवाज़ से भरा गया"));
   }
 
   const appliedInitialIntent = useRef(false);
@@ -252,10 +284,10 @@ export function NewKitForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (activeTab === "chapter" && !chapterId) return void toast.error("Pick a chapter, or type a topic / upload material");
-    if (activeTab === "topic" && !topic.trim()) return void toast.error("Type the topic you want to teach");
-    if (activeTab === "upload" && (reading || readingAudio)) return void toast.error("Still reading your files…");
-    if (activeTab === "upload" && !materialId && !sourcePages?.length) return void toast.error("Choose material from Resources or upload it");
+    if (activeTab === "chapter" && !chapterId) return void toast.error(tx(ui, "Pick a chapter, or type a topic / upload material", "अध्याय चुनें, या विषय लिखें / सामग्री अपलोड करें"));
+    if (activeTab === "topic" && !topic.trim()) return void toast.error(tx(ui, "Type the topic you want to teach", "जो विषय पढ़ाना है, वह लिखें"));
+    if (activeTab === "upload" && (reading || readingAudio)) return void toast.error(tx(ui, "Still reading your files…", "फ़ाइलें अभी पढ़ी जा रही हैं…"));
+    if (activeTab === "upload" && !materialId && !sourcePages?.length) return void toast.error(tx(ui, "Choose material from Resources or upload it", "संसाधनों से सामग्री चुनें या अपलोड करें"));
     setSubmitting(true);
 
     // OBJECTIVES/LESSON_PLAN are added server-side automatically (Ujjwal's POST /api/kits
@@ -298,7 +330,7 @@ export function NewKitForm({
       const { id } = data as { id: string };
       router.push(`/kits/${id}?autostart=1`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create the kit");
+      toast.error(err instanceof Error ? err.message : tx(ui, "Could not create the kit", "किट नहीं बन सकी"));
       setSubmitting(false);
     }
   }
@@ -306,17 +338,33 @@ export function NewKitForm({
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-6 pb-10">
       <FadeIn className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">New lesson kit</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{tx(ui, "New lesson kit", "नई पाठ किट")}</h1>
         <MicButton onIntent={handleVoiceIntent} />
       </FadeIn>
 
       <FadeIn index={1} className="space-y-3 rounded-3xl bg-card p-5 ring-1 ring-foreground/[0.04] md:p-6">
-        <StepHeading step={1} title="What are you teaching?" />
+        <StepHeading step={1} title={tx(ui, "What are you teaching?", "आप क्या पढ़ा रहे हैं?")} />
+        {classrooms.length > 0 && (
+          <div className="space-y-1.5">
+            <Label>{tx(ui, "Which class?", "कौन-सी कक्षा?")}</Label>
+            <Select items={classrooms.map((c) => ({ value: c.id, label: c.name }))} value={classroomId} onValueChange={(v) => pickClassroom(v ?? undefined)}>
+              <SelectTrigger className="h-11"><SelectValue placeholder={tx(ui, "Choose your class", "अपनी कक्षा चुनें")} /></SelectTrigger>
+              <SelectContent>
+                {classrooms.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {tx(ui, "Class, subject and class size are filled in from your class — change them below if needed.", "कक्षा, विषय और बच्चों की संख्या आपकी कक्षा से भर दी गई है — ज़रूरत हो तो नीचे बदलें।")}
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Class</Label>
+            <Label>{tx(ui, "Class", "कक्षा")}</Label>
             <Select
-              items={GRADES.map((g) => ({ value: String(g), label: `Class ${g}` }))}
+              items={GRADES.map((g) => ({ value: String(g), label: tx(ui, `Class ${g}`, `कक्षा ${g}`) }))}
               value={String(grade)}
               onValueChange={(v) => {
                 const g = Number(v);
@@ -327,13 +375,13 @@ export function NewKitForm({
               <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {GRADES.map((g) => (
-                  <SelectItem key={g} value={String(g)}>Class {g}</SelectItem>
+                  <SelectItem key={g} value={String(g)}>{tx(ui, `Class ${g}`, `कक्षा ${g}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Subject</Label>
+            <Label>{tx(ui, "Subject", "विषय")}</Label>
             <Select
               value={subject}
               onValueChange={(v) => {
@@ -354,82 +402,85 @@ export function NewKitForm({
 
         <Tabs value={activeTab} onValueChange={(v) => v && setActiveTab(v as SourceTab)} className="pt-2">
           <TabsList className="flex-wrap">
-            <TabsTrigger value="chapter">NCERT chapter</TabsTrigger>
-            <TabsTrigger value="topic">Type topic</TabsTrigger>
-            <TabsTrigger value="upload">Material + recording</TabsTrigger>
+            <TabsTrigger value="chapter">{tx(ui, "NCERT chapter", "NCERT अध्याय")}</TabsTrigger>
+            <TabsTrigger value="topic">{tx(ui, "Type topic", "विषय लिखें")}</TabsTrigger>
+            <TabsTrigger value="upload">{tx(ui, "Material + recording", "सामग्री + रिकॉर्डिंग")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chapter" className="space-y-3 pt-4">
             {chaptersForSubject.length > 0 ? (
               <div className="space-y-1.5">
-                <Label>Chapter</Label>
+                <Label>{tx(ui, "Chapter", "अध्याय")}</Label>
                 <Select
                   items={chaptersForSubject.map((c) => ({ value: c.value, label: `Ch ${c.no}: ${c.title}` }))}
                   value={chapterId}
                   onValueChange={(v) => setChapterId(v ?? undefined)}
                 >
-                  <SelectTrigger className="h-11"><SelectValue placeholder="Choose a chapter" /></SelectTrigger>
+                  <SelectTrigger className="h-11"><SelectValue placeholder={tx(ui, "Choose a chapter", "अध्याय चुनें")} /></SelectTrigger>
                   <SelectContent>
                     {chaptersForSubject.map((c) => (
                       <SelectItem key={c.value} value={c.value}>
                         Ch {c.no}: {c.title}
-                        {c.grounded && <span className="ml-2 rounded-md bg-accent px-1.5 py-px text-[10px] font-medium text-accent-foreground">full text</span>}
+                        {c.grounded && <span className="ml-2 rounded-md bg-accent px-1.5 py-px text-[10px] font-medium text-accent-foreground">{tx(ui, "full text", "पूरा पाठ")}</span>}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   {pickedChapter?.grounded
-                    ? `NCERT ${pickedChapter.book} — full chapter text is loaded, so every question cites its page.`
-                    : "Generated from the NCERT chapter title. For page-cited questions, add the chapter under “Upload material”."}
+                    ? tx(ui, `NCERT ${pickedChapter.book} — full chapter text is loaded, so every question cites its page.`, `NCERT ${pickedChapter.book} — पूरा अध्याय उपलब्ध है, हर प्रश्न के साथ पृष्ठ संख्या होगी।`)
+                    : tx(ui, "Generated from the NCERT chapter title. For page-cited questions, add the chapter under “Upload material”.", "NCERT अध्याय के नाम से बनेगा। पृष्ठ संख्या वाले प्रश्नों के लिए अध्याय “सामग्री + रिकॉर्डिंग” में जोड़ें।")}
                 </p>
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
                 <p>
-                  Class {grade} {subject} isn&apos;t in the NCERT library yet. Type the topic, or upload the chapter from your
-                  textbook — photos, PDF or notes all work.
+                  {tx(
+                    ui,
+                    `Class ${grade} ${subject} isn't in the NCERT library yet. Type the topic, or upload the chapter from your textbook — photos, PDF or notes all work.`,
+                    `कक्षा ${grade} ${subject} अभी NCERT सूची में नहीं है। विषय लिखें, या किताब का अध्याय अपलोड करें — फ़ोटो, PDF या नोट्स, सब चलेगा।`,
+                  )}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => setActiveTab("topic")}>Type topic</Button>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setActiveTab("upload")}>Upload material</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setActiveTab("topic")}>{tx(ui, "Type topic", "विषय लिखें")}</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setActiveTab("upload")}>{tx(ui, "Upload material", "सामग्री अपलोड करें")}</Button>
                 </div>
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="topic" className="space-y-1.5 pt-4">
-            <Label>Topic / learning objective</Label>
-            <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Photosynthesis in green plants" maxLength={2000} />
+            <Label>{tx(ui, "Topic / learning objective", "विषय / सीखने का उद्देश्य")}</Label>
+            <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={tx(ui, "e.g. Photosynthesis in green plants", "जैसे: हरे पौधों में प्रकाश संश्लेषण")} maxLength={2000} />
           </TabsContent>
 
           <TabsContent value="upload" className="space-y-4 pt-4">
             <div className="space-y-3 rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="flex items-center gap-2 font-medium"><FileText className="size-4 text-rose-600" /> Teaching material</p>
-                <span className="text-xs text-muted-foreground">Required</span>
+                <p className="flex items-center gap-2 font-medium"><FileText className="size-4 text-rose-600" /> {tx(ui, "Teaching material", "पढ़ाने की सामग्री")}</p>
+                <span className="text-xs text-muted-foreground">{tx(ui, "Required", "ज़रूरी")}</span>
               </div>
               <div className="space-y-1.5">
-                <Label>Choose from Resources</Label>
+                <Label>{tx(ui, "Choose from Resources", "संसाधनों से चुनें")}</Label>
                 <Select
-                  items={[{ value: "none", label: documents.length ? "— None —" : "Your Resources are empty" }, ...documents.map((d) => ({ value: d.id, label: d.title }))]}
+                  items={[{ value: "none", label: documents.length ? tx(ui, "— None —", "— कोई नहीं —") : tx(ui, "Your Resources are empty", "संसाधन खाली हैं") }, ...documents.map((d) => ({ value: d.id, label: d.title }))]}
                   value={materialId ?? "none"}
                   onValueChange={(v) => setMaterialId(v && v !== "none" ? v : undefined)}
                 >
                   <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">{documents.length ? "— None —" : "Your Resources are empty"}</SelectItem>
+                    <SelectItem value="none">{documents.length ? tx(ui, "— None —", "— कोई नहीं —") : tx(ui, "Your Resources are empty", "संसाधन खाली हैं")}</SelectItem>
                     {documents.map((d) => (
                       <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <p className="text-center text-xs text-muted-foreground">or upload new</p>
+              <p className="text-center text-xs text-muted-foreground">{tx(ui, "or upload new", "या नई फ़ाइल अपलोड करें")}</p>
               <SourceDropzone
                 disabled={reading}
                 accept={DOC_ACCEPT}
-                hint="PDF, Word (.docx), .txt, or several photos of textbook pages"
+                hint={tx(ui, "PDF, Word (.docx), .txt, or several photos of textbook pages", "PDF, Word (.docx), .txt, या किताब के पन्नों की कई फ़ोटो")}
                 onFiles={(added) => readFiles([...files, ...added])}
               />
               {files.length > 0 && (
@@ -452,32 +503,32 @@ export function NewKitForm({
               )}
               {reading && (
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" /> Reading your files…
+                  <Loader2 className="size-4 animate-spin" /> {tx(ui, "Reading your files…", "फ़ाइलें पढ़ी जा रही हैं…")}
                 </p>
               )}
               {sourcePages && !reading && (
                 <p className="text-sm font-medium text-primary">
-                  Read {sourcePages.length} page{sourcePages.length === 1 ? "" : "s"} from {files.length} file{files.length === 1 ? "" : "s"}
+                  {tx(ui, `Read ${sourcePages.length} page${sourcePages.length === 1 ? "" : "s"} from ${files.length} file${files.length === 1 ? "" : "s"}`, `${files.length} फ़ाइल से ${sourcePages.length} पन्ने पढ़े गए`)}
                 </p>
               )}
               {files.length > 0 && (
                 <div className="space-y-1.5">
-                  <Label>Name this material</Label>
-                  <Input className="h-11" value={sourceName} onChange={(e) => setSourceName(e.target.value)} placeholder="e.g. Chapter 5 notes" maxLength={200} />
+                  <Label>{tx(ui, "Name this material", "इस सामग्री का नाम")}</Label>
+                  <Input className="h-11" value={sourceName} onChange={(e) => setSourceName(e.target.value)} placeholder={tx(ui, "e.g. Chapter 5 notes", "जैसे: अध्याय 5 के नोट्स")} maxLength={200} />
                 </div>
               )}
             </div>
 
             <div className="space-y-3 rounded-2xl border border-border p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="flex items-center gap-2 font-medium"><AudioLines className="size-4 text-violet-600" /> Class recording</p>
-                <span className="text-xs text-muted-foreground">Optional</span>
+                <p className="flex items-center gap-2 font-medium"><AudioLines className="size-4 text-violet-600" /> {tx(ui, "Class recording", "कक्षा की रिकॉर्डिंग")}</p>
+                <span className="text-xs text-muted-foreground">{tx(ui, "Optional", "वैकल्पिक")}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Add what you said in class so the plan builds on it — e.g. the doubts students raised.</p>
+              <p className="text-xs text-muted-foreground">{tx(ui, "Add what you said in class so the plan builds on it — e.g. the doubts students raised.", "कक्षा में जो पढ़ाया, वह जोड़ें ताकि योजना उसी पर आगे बढ़े — जैसे बच्चों के सवाल।")}</p>
               <div className="space-y-1.5">
-                <Label>Choose from Recordings</Label>
+                <Label>{tx(ui, "Choose from Recordings", "रिकॉर्डिंग से चुनें")}</Label>
                 <Select
-                  items={[{ value: "none", label: recordings.length ? "— None —" : "No recordings yet" }, ...recordings.map((r) => ({ value: r.id, label: r.title }))]}
+                  items={[{ value: "none", label: recordings.length ? tx(ui, "— None —", "— कोई नहीं —") : tx(ui, "No recordings yet", "अभी कोई रिकॉर्डिंग नहीं") }, ...recordings.map((r) => ({ value: r.id, label: r.title }))]}
                   value={recordingId ?? "none"}
                   onValueChange={(v) => {
                     setRecordingId(v && v !== "none" ? v : undefined);
@@ -486,20 +537,20 @@ export function NewKitForm({
                 >
                   <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">{recordings.length ? "— None —" : "No recordings yet"}</SelectItem>
+                    <SelectItem value="none">{recordings.length ? tx(ui, "— None —", "— कोई नहीं —") : tx(ui, "No recordings yet", "अभी कोई रिकॉर्डिंग नहीं")}</SelectItem>
                     {recordings.map((r) => (
                       <SelectItem key={r.id} value={r.id}>{r.title}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <p className="text-center text-xs text-muted-foreground">or upload audio</p>
+              <p className="text-center text-xs text-muted-foreground">{tx(ui, "or upload audio", "या ऑडियो अपलोड करें")}</p>
               {audioFile ? (
                 <div className="flex items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2 text-sm">
                   <span className="flex min-w-0 items-center gap-2 truncate">
                     {readingAudio ? <Loader2 className="size-4 animate-spin" /> : <AudioLines className="size-4 text-violet-600" />}
                     {audioFile.name}
-                    {readingAudio ? " — transcribing…" : audioPages ? " — transcribed" : ""}
+                    {readingAudio ? tx(ui, " — transcribing…", " — ट्रांसक्रिप्ट बन रहा है…") : audioPages ? tx(ui, " — transcribed", " — ट्रांसक्रिप्ट तैयार") : ""}
                   </span>
                   <button type="button" disabled={readingAudio} onClick={() => readAudio(null)} className="text-muted-foreground hover:text-destructive" aria-label="Remove audio">
                     <X className="size-4" />
@@ -508,7 +559,7 @@ export function NewKitForm({
               ) : (
                 <SourceDropzone
                   accept={AUDIO_ACCEPT}
-                  hint="mp3, m4a, wav or webm — transcribed in Hindi or English"
+                  hint={tx(ui, "mp3, m4a, wav or webm — transcribed in Hindi or English", "mp3, m4a, wav या webm — हिंदी या अंग्रेज़ी में ट्रांसक्रिप्ट")}
                   onFiles={(added) => void readAudio(added[0] ?? null)}
                 />
               )}
@@ -518,33 +569,22 @@ export function NewKitForm({
       </FadeIn>
 
       <FadeIn index={2} className="space-y-4 rounded-3xl bg-card p-5 ring-1 ring-foreground/[0.04] md:p-6">
-        <StepHeading step={2} title="Class context" />
+        <StepHeading step={2} title={tx(ui, "Class context", "कक्षा की जानकारी")} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Classroom</Label>
-            <Select items={classrooms.map((c) => ({ value: c.id, label: c.name }))} value={classroomId} onValueChange={(v) => setClassroomId(v ?? undefined)}>
-              <SelectTrigger className="h-11"><SelectValue placeholder="Classroom" /></SelectTrigger>
-              <SelectContent>
-                {classrooms.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Date to teach</Label>
+            <Label>{tx(ui, "Date to teach", "पढ़ाने की तारीख़")}</Label>
             <Input className="h-11" type="date" value={scheduledFor} onChange={(e) => setScheduledFor(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label>Period length (minutes)</Label>
+            <Label>{tx(ui, "Period length (minutes)", "पीरियड की अवधि (मिनट)")}</Label>
             <Input className="h-11" type="number" min={20} max={90} value={periodMinutes} onChange={(e) => setPeriodMinutes(Number(e.target.value))} />
           </div>
           <div className="space-y-1.5">
-            <Label>Class size</Label>
+            <Label>{tx(ui, "Class size", "बच्चों की संख्या")}</Label>
             <Input className="h-11" type="number" min={1} max={120} value={classSize} onChange={(e) => setClassSize(Number(e.target.value))} />
           </div>
           <div className="space-y-1.5">
-            <Label>Content language</Label>
+            <Label>{tx(ui, "Content language", "सामग्री की भाषा")}</Label>
             <Select items={{ hi: "हिंदी (Hindi)", en: "English" }} value={language} onValueChange={(v) => setLanguage(v as "hi" | "en")}>
               <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -555,8 +595,8 @@ export function NewKitForm({
           </div>
           <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-secondary/40 px-3 sm:col-span-2">
             <Label htmlFor="low-resource" className="py-3 text-sm leading-snug">
-              Low-resource classroom
-              <span className="block font-normal text-muted-foreground">Blackboard + local objects only, no projector</span>
+              {tx(ui, "Low-resource classroom", "कम संसाधन वाली कक्षा")}
+              <span className="block font-normal text-muted-foreground">{tx(ui, "Blackboard + local objects only, no projector", "सिर्फ़ ब्लैकबोर्ड और आसपास की चीज़ें, प्रोजेक्टर नहीं")}</span>
             </Label>
             <Switch id="low-resource" checked={lowResource} onCheckedChange={setLowResource} />
           </div>
@@ -564,20 +604,23 @@ export function NewKitForm({
       </FadeIn>
 
       <FadeIn index={3} className="space-y-4 rounded-3xl bg-card p-5 ring-1 ring-foreground/[0.04] md:p-6">
-        <StepHeading step={3} title="Anything to add?" />
+        <StepHeading step={3} title={tx(ui, "Anything to add?", "कुछ और जोड़ना है?")} />
         <p className="text-sm text-muted-foreground">
-          We&apos;ll write the objectives and lesson plan first. Once you&apos;ve reviewed them, add a worksheet, exit quiz or
-          parent note from the kit page — only the ones you want.
+          {tx(
+            ui,
+            "We'll write the objectives and lesson plan first. Once you've reviewed them, add a worksheet, exit quiz or parent note from the kit page — only the ones you want.",
+            "पहले उद्देश्य और पाठ योजना बनेगी। उन्हें देखने के बाद किट पेज से कार्यपत्रक, निकास क्विज़ या अभिभावक संदेश जोड़ें — सिर्फ़ जो आप चाहें।",
+          )}
         </p>
         <div className="space-y-1.5">
-          <Label>Note to the AI (optional)</Label>
-          <Textarea value={teacherNote} onChange={(e) => setTeacherNote(e.target.value)} maxLength={500} placeholder="Anything specific you want covered" />
+          <Label>{tx(ui, "Note to the AI (optional)", "AI के लिए निर्देश (वैकल्पिक)")}</Label>
+          <Textarea value={teacherNote} onChange={(e) => setTeacherNote(e.target.value)} maxLength={500} placeholder={tx(ui, "Anything specific you want covered", "कोई ख़ास बात जो शामिल करनी हो")} />
         </div>
       </FadeIn>
 
       <FadeIn index={4}>
         <Button type="submit" size="lg" disabled={submitting} className="w-full sm:w-auto">
-          {submitting ? "Creating…" : "Create lesson plan"}
+          {submitting ? tx(ui, "Creating…", "बन रही है…") : tx(ui, "Create lesson plan", "पाठ योजना बनाएँ")}
         </Button>
       </FadeIn>
     </form>

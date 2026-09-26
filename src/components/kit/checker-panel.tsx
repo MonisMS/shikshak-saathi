@@ -1,17 +1,22 @@
+"use client";
+
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ValidationRuleResult } from "@/lib/validate";
 
 /** Checker panel (F22): pass/fail rule checklist, run after every section finishes (§10.6). */
 export function CheckerPanel({ results }: { results: ValidationRuleResult[] | null }) {
+  const { lang } = useLanguage();
   if (!results) {
     return (
       <Card className="border-border/70">
         <CardHeader>
-          <CardTitle className="text-base">Checker</CardTitle>
+          <CardTitle className="text-base">{tx(lang, "Checker", "जाँच")}</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">Runs automatically once every section is generated.</CardContent>
+        <CardContent className="text-sm text-muted-foreground">{tx(lang, "Runs automatically once every section is generated.", "हर भाग बनने के बाद अपने-आप चलती है।")}</CardContent>
       </Card>
     );
   }
@@ -22,7 +27,7 @@ export function CheckerPanel({ results }: { results: ValidationRuleResult[] | nu
     <Card className="border-border/70">
       <CardHeader>
         <CardTitle className="text-base">
-          Checker — {passed}/{results.length} passed
+          {tx(lang, "Checker", "जाँच")} — {passed}/{results.length} {tx(lang, "passed", "सही")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">

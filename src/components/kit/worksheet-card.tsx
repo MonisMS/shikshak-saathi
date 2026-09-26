@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ListEditor, linesToArray, arrayToLines } from "./list-editor";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx } from "@/lib/i18n";
 
 type WorksheetData = z.infer<typeof Worksheet>;
 type Question = WorksheetData["questions"][number];
@@ -43,6 +45,7 @@ export function WorksheetCard({
   data: WorksheetData;
   onSave?: (next: WorksheetData) => Promise<void>;
 }) {
+  const { lang } = useLanguage();
   const [showAnswers, setShowAnswers] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<WorksheetData>(data);
@@ -67,15 +70,15 @@ export function WorksheetCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{draft.title} (editing)</CardTitle>
+          <CardTitle>{draft.title} {tx(lang, "(editing)", "(संपादन)")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1">
-            <Label>Title</Label>
+            <Label>{tx(lang, "Title", "शीर्षक")}</Label>
             <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
           </div>
           <div className="space-y-1">
-            <Label>Instructions</Label>
+            <Label>{tx(lang, "Instructions", "निर्देश")}</Label>
             <Textarea value={draft.instructions} onChange={(e) => setDraft({ ...draft, instructions: e.target.value })} />
           </div>
 
@@ -92,7 +95,7 @@ export function WorksheetCard({
               bloom: "understand",
               objectiveId: "",
             })}
-            addLabel="Add question"
+            addLabel={tx(lang, "Add question", "प्रश्न जोड़ें")}
             renderItem={(q, onChange) => (
               <>
                 <div className="flex flex-wrap items-center gap-2">
@@ -125,35 +128,35 @@ export function WorksheetCard({
                   <span className="text-xs text-muted-foreground">marks</span>
                 </div>
 
-                <Textarea value={q.prompt} onChange={(e) => onChange({ ...q, prompt: e.target.value })} placeholder="Question prompt" />
+                <Textarea value={q.prompt} onChange={(e) => onChange({ ...q, prompt: e.target.value })} placeholder={tx(lang, "Question prompt", "प्रश्न")} />
 
                 {needsOptions(q.type) && (
                   <Textarea
                     value={arrayToLines(q.options ?? [])}
                     onChange={(e) => onChange({ ...q, options: linesToArray(e.target.value) })}
-                    placeholder="Options, one per line (4 for mcq/assertion_reason)"
+                    placeholder={tx(lang, "Options, one per line (4 for mcq/assertion_reason)", "विकल्प, हर पंक्ति में एक (mcq के लिए 4)")}
                   />
                 )}
 
                 {q.type === "case_based" && (
                   <>
-                    <Textarea value={q.caseText ?? ""} onChange={(e) => onChange({ ...q, caseText: e.target.value })} placeholder="Case passage" />
+                    <Textarea value={q.caseText ?? ""} onChange={(e) => onChange({ ...q, caseText: e.target.value })} placeholder={tx(lang, "Case passage", "केस अनुच्छेद")} />
                     <Textarea
                       value={arrayToLines(q.subQuestions ?? [])}
                       onChange={(e) => onChange({ ...q, subQuestions: linesToArray(e.target.value) })}
-                      placeholder="Sub-questions, one per line"
+                      placeholder={tx(lang, "Sub-questions, one per line", "उप-प्रश्न, हर पंक्ति में एक")}
                     />
                   </>
                 )}
 
-                <Input value={q.answer} onChange={(e) => onChange({ ...q, answer: e.target.value })} placeholder="Answer key" />
-                <Input value={q.objectiveId} onChange={(e) => onChange({ ...q, objectiveId: e.target.value })} placeholder="Objective id (O1)" />
+                <Input value={q.answer} onChange={(e) => onChange({ ...q, answer: e.target.value })} placeholder={tx(lang, "Answer key", "उत्तर कुंजी")} />
+                <Input value={q.objectiveId} onChange={(e) => onChange({ ...q, objectiveId: e.target.value })} placeholder={tx(lang, "Objective id (O1)", "उद्देश्य id (O1)")} />
                 <Input
                   type="number"
                   className="w-24"
                   value={q.pageRef ?? ""}
                   onChange={(e) => onChange({ ...q, pageRef: e.target.value ? Number(e.target.value) : undefined })}
-                  placeholder="Page ref"
+                  placeholder={tx(lang, "Page ref", "पृष्ठ")}
                 />
               </>
             )}
@@ -161,10 +164,10 @@ export function WorksheetCard({
 
           <div className="flex gap-2">
             <Button size="sm" onClick={save} disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? tx(lang, "Saving…", "सहेजा जा रहा है…") : tx(lang, "Save", "सहेजें")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
-              Cancel
+              {tx(lang, "Cancel", "रद्द करें")}
             </Button>
           </div>
         </CardContent>
@@ -179,13 +182,13 @@ export function WorksheetCard({
         <CardAction className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Label htmlFor="show-answers" className="text-xs font-normal text-muted-foreground">
-              Show answers
+              {tx(lang, "Show answers", "उत्तर दिखाएँ")}
             </Label>
             <Switch id="show-answers" checked={showAnswers} onCheckedChange={setShowAnswers} />
           </div>
           {onSave && (
             <Button variant="outline" size="sm" onClick={startEdit}>
-              Edit
+              {tx(lang, "Edit", "संपादित करें")}
             </Button>
           )}
         </CardAction>
@@ -200,7 +203,7 @@ export function WorksheetCard({
                   {i + 1}. {q.prompt}
                 </span>
                 <div className="flex shrink-0 gap-1">
-                  <Badge variant="outline">{q.marks} mk</Badge>
+                  <Badge variant="outline">{q.marks} {tx(lang, "mk", "अंक")}</Badge>
                   <Badge variant="secondary">{q.type.replace("_", " ")}</Badge>
                 </div>
               </div>
@@ -235,7 +238,7 @@ export function WorksheetCard({
 
               {showAnswers && (
                 <p className="mt-2 text-sm text-green-700 dark:text-green-400">
-                  <span className="font-medium">Answer: </span>
+                  <span className="font-medium">{tx(lang, "Answer: ", "उत्तर: ")}</span>
                   {q.answer}
                 </p>
               )}
@@ -243,7 +246,7 @@ export function WorksheetCard({
             </li>
           ))}
         </ol>
-        <p className="text-right text-sm font-medium">Total: {data.totalMarks} marks</p>
+        <p className="text-right text-sm font-medium">{tx(lang, "Total", "कुल")}: {data.totalMarks} {tx(lang, "marks", "अंक")}</p>
       </CardContent>
     </Card>
   );

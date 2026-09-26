@@ -18,17 +18,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ListEditor, linesToArray, arrayToLines } from "./list-editor";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx, type Lang } from "@/lib/i18n";
 
-const PHASE_LABEL: Record<string, string> = {
-  warmup_fix: "Start with: fix",
-  starter: "Starter",
-  explain: "Explain",
-  activity: "Activity",
-  practice: "Practice",
-  exit_check: "Exit check",
-  wrap_up: "Wrap up",
+const PHASE_LABELS: Record<string, { en: string; hi: string }> = {
+  warmup_fix: { en: "Start with: fix", hi: "शुरुआत: सुधार" },
+  starter: { en: "Starter", hi: "आरंभ" },
+  explain: { en: "Explain", hi: "समझाएँ" },
+  activity: { en: "Activity", hi: "गतिविधि" },
+  practice: { en: "Practice", hi: "अभ्यास" },
+  exit_check: { en: "Exit check", hi: "अंतिम जाँच" },
+  wrap_up: { en: "Wrap up", hi: "समापन" },
 };
-const PHASES = Object.keys(PHASE_LABEL);
+const PHASES = Object.keys(PHASE_LABELS);
+const phaseLabel = (phase: string, lang: Lang) => PHASE_LABELS[phase]?.[lang];
 
 type PlanData = z.infer<typeof LessonPlan>;
 type PlanSection = PlanData["sections"][number];
@@ -49,6 +52,7 @@ export function LessonPlanCard({
   data: PlanData;
   onSave?: (next: PlanData) => Promise<void>;
 }) {
+  const { lang } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<PlanData>(data);
   const [saving, setSaving] = useState(false);
@@ -72,26 +76,26 @@ export function LessonPlanCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Lesson plan (editing)</CardTitle>
+          <CardTitle>{tx(lang, "Lesson plan (editing)", "पाठ योजना (संपादन)")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-1">
-            <Label>Title</Label>
+            <Label>{tx(lang, "Title", "शीर्षक")}</Label>
             <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
           </div>
           <div className="space-y-1">
-            <Label>Learning outcome</Label>
+            <Label>{tx(lang, "Learning outcome", "सीखने का परिणाम")}</Label>
             <Textarea value={draft.learningOutcome} onChange={(e) => setDraft({ ...draft, learningOutcome: e.target.value })} />
           </div>
           <div className="space-y-1">
-            <Label>Prior knowledge (one per line)</Label>
+            <Label>{tx(lang, "Prior knowledge (one per line)", "पूर्व ज्ञान (हर पंक्ति में एक)")}</Label>
             <Textarea
               value={arrayToLines(draft.priorKnowledge)}
               onChange={(e) => setDraft({ ...draft, priorKnowledge: linesToArray(e.target.value) })}
             />
           </div>
           <div className="space-y-1">
-            <Label>Key learning points (one per line)</Label>
+            <Label>{tx(lang, "Key learning points (one per line)", "मुख्य बिंदु (हर पंक्ति में एक)")}</Label>
             <Textarea
               value={arrayToLines(draft.keyLearningPoints)}
               onChange={(e) => setDraft({ ...draft, keyLearningPoints: linesToArray(e.target.value) })}
@@ -99,28 +103,28 @@ export function LessonPlanCard({
           </div>
 
           <div className="space-y-1">
-            <Label>Keywords</Label>
+            <Label>{tx(lang, "Keywords", "मुख्य शब्द")}</Label>
             <ListEditor<Keyword>
               items={draft.keywords}
               onChange={(keywords) => setDraft({ ...draft, keywords })}
               newItem={() => ({ term: "", definition: "" })}
-              addLabel="Add keyword"
+              addLabel={tx(lang, "Add keyword", "शब्द जोड़ें")}
               renderItem={(k, onChange) => (
                 <>
-                  <Input value={k.term} onChange={(e) => onChange({ ...k, term: e.target.value })} placeholder="Term" />
-                  <Input value={k.definition} onChange={(e) => onChange({ ...k, definition: e.target.value })} placeholder="Definition" />
+                  <Input value={k.term} onChange={(e) => onChange({ ...k, term: e.target.value })} placeholder={tx(lang, "Term", "शब्द")} />
+                  <Input value={k.definition} onChange={(e) => onChange({ ...k, definition: e.target.value })} placeholder={tx(lang, "Definition", "परिभाषा")} />
                 </>
               )}
             />
           </div>
 
           <div className="space-y-1">
-            <Label>Misconceptions</Label>
+            <Label>{tx(lang, "Misconceptions", "गलत धारणाएँ")}</Label>
             <ListEditor<Misconception>
               items={draft.misconceptions}
               onChange={(misconceptions) => setDraft({ ...draft, misconceptions })}
               newItem={() => ({ id: `M${draft.misconceptions.length + 1}`, misconception: "", correction: "", pageRef: 1 })}
-              addLabel="Add misconception"
+              addLabel={tx(lang, "Add misconception", "गलत धारणा जोड़ें")}
               renderItem={(m, onChange) => (
                 <>
                   <div className="flex items-center gap-2">
@@ -132,15 +136,15 @@ export function LessonPlanCard({
                       onChange={(e) => onChange({ ...m, pageRef: Number(e.target.value) })}
                     />
                   </div>
-                  <Textarea value={m.misconception} onChange={(e) => onChange({ ...m, misconception: e.target.value })} placeholder="What students wrongly believe" />
-                  <Textarea value={m.correction} onChange={(e) => onChange({ ...m, correction: e.target.value })} placeholder="Correction" />
+                  <Textarea value={m.misconception} onChange={(e) => onChange({ ...m, misconception: e.target.value })} placeholder={tx(lang, "What students wrongly believe", "विद्यार्थी क्या गलत समझते हैं")} />
+                  <Textarea value={m.correction} onChange={(e) => onChange({ ...m, correction: e.target.value })} placeholder={tx(lang, "Correction", "सुधार")} />
                 </>
               )}
             />
           </div>
 
           <div className="space-y-1">
-            <Label>Sections (minutes should sum to the period length)</Label>
+            <Label>{tx(lang, "Sections (minutes should sum to the period length)", "चरण (मिनटों का जोड़ कालांश के बराबर हो)")}</Label>
             <ListEditor<PlanSection>
               items={draft.sections}
               onChange={(sections) => setDraft({ ...draft, sections })}
@@ -155,7 +159,7 @@ export function LessonPlanCard({
                 objectiveIds: [],
                 pageRefs: [],
               })}
-              addLabel="Add section"
+              addLabel={tx(lang, "Add section", "चरण जोड़ें")}
               renderItem={(s, onChange) => (
                 <>
                   <div className="flex items-center gap-2">
@@ -164,30 +168,30 @@ export function LessonPlanCard({
                       <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {PHASES.map((p) => (
-                          <SelectItem key={p} value={p}>{PHASE_LABEL[p]}</SelectItem>
+                          <SelectItem key={p} value={p}>{phaseLabel(p, lang)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <Input type="number" className="w-20" value={s.minutes} onChange={(e) => onChange({ ...s, minutes: Number(e.target.value) })} />
-                    <span className="text-xs text-muted-foreground">min</span>
+                    <span className="text-xs text-muted-foreground">{tx(lang, "min", "मिनट")}</span>
                   </div>
-                  <Input value={s.title} onChange={(e) => onChange({ ...s, title: e.target.value })} placeholder="Title" />
-                  <Textarea value={s.teacherSays} onChange={(e) => onChange({ ...s, teacherSays: e.target.value })} placeholder="Teacher says…" />
-                  <Textarea value={s.studentsDo} onChange={(e) => onChange({ ...s, studentsDo: e.target.value })} placeholder="Students do…" />
+                  <Input value={s.title} onChange={(e) => onChange({ ...s, title: e.target.value })} placeholder={tx(lang, "Title", "शीर्षक")} />
+                  <Textarea value={s.teacherSays} onChange={(e) => onChange({ ...s, teacherSays: e.target.value })} placeholder={tx(lang, "Teacher says…", "शिक्षक कहेंगे…")} />
+                  <Textarea value={s.studentsDo} onChange={(e) => onChange({ ...s, studentsDo: e.target.value })} placeholder={tx(lang, "Students do…", "विद्यार्थी करेंगे…")} />
                   <Input
                     value={s.materials.join(", ")}
                     onChange={(e) => onChange({ ...s, materials: csvToStrings(e.target.value) })}
-                    placeholder="Materials, comma separated"
+                    placeholder={tx(lang, "Materials, comma separated", "सामग्री, कॉमा से अलग")}
                   />
                   <Input
                     value={s.objectiveIds.join(", ")}
                     onChange={(e) => onChange({ ...s, objectiveIds: csvToStrings(e.target.value) })}
-                    placeholder="Objective ids, comma separated (O1, O2)"
+                    placeholder={tx(lang, "Objective ids, comma separated (O1, O2)", "उद्देश्य id, कॉमा से अलग (O1, O2)")}
                   />
                   <Input
                     value={s.pageRefs.join(", ")}
                     onChange={(e) => onChange({ ...s, pageRefs: csvToNumbers(e.target.value) })}
-                    placeholder="Page refs, comma separated"
+                    placeholder={tx(lang, "Page refs, comma separated", "पृष्ठ संख्या, कॉमा से अलग")}
                   />
                 </>
               )}
@@ -195,16 +199,16 @@ export function LessonPlanCard({
           </div>
 
           <div className="space-y-1">
-            <Label>Homework</Label>
+            <Label>{tx(lang, "Homework", "गृहकार्य")}</Label>
             <Textarea value={draft.homework} onChange={(e) => setDraft({ ...draft, homework: e.target.value })} />
           </div>
 
           <div className="flex gap-2">
             <Button size="sm" onClick={save} disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? tx(lang, "Saving…", "सहेजा जा रहा है…") : tx(lang, "Save", "सहेजें")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
-              Cancel
+              {tx(lang, "Cancel", "रद्द करें")}
             </Button>
           </div>
         </CardContent>
@@ -222,14 +226,14 @@ export function LessonPlanCard({
         {onSave && (
           <CardAction>
             <Button variant="outline" size="sm" onClick={startEdit}>
-              Edit
+              {tx(lang, "Edit", "संपादित करें")}
             </Button>
           </CardAction>
         )}
       </CardHeader>
       <CardContent className="space-y-6">
         <section>
-          <h4 className="mb-1 text-sm font-semibold">Prior knowledge</h4>
+          <h4 className="mb-1 text-sm font-semibold">{tx(lang, "Prior knowledge", "पूर्व ज्ञान")}</h4>
           <ul className="list-inside list-disc text-sm text-muted-foreground">
             {data.priorKnowledge.map((p, i) => (
               <li key={i}>{p}</li>
@@ -238,7 +242,7 @@ export function LessonPlanCard({
         </section>
 
         <section>
-          <h4 className="mb-1 text-sm font-semibold">Key learning points</h4>
+          <h4 className="mb-1 text-sm font-semibold">{tx(lang, "Key learning points", "मुख्य बिंदु")}</h4>
           <ul className="list-inside list-disc text-sm text-muted-foreground">
             {data.keyLearningPoints.map((p, i) => (
               <li key={i}>{p}</li>
@@ -247,7 +251,7 @@ export function LessonPlanCard({
         </section>
 
         <section>
-          <h4 className="mb-1 text-sm font-semibold">Keywords</h4>
+          <h4 className="mb-1 text-sm font-semibold">{tx(lang, "Keywords", "मुख्य शब्द")}</h4>
           <dl className="space-y-1 text-sm">
             {data.keywords.map((k) => (
               <div key={k.term}>
@@ -259,7 +263,7 @@ export function LessonPlanCard({
         </section>
 
         <section>
-          <h4 className="mb-1 text-sm font-semibold">Misconceptions</h4>
+          <h4 className="mb-1 text-sm font-semibold">{tx(lang, "Misconceptions", "गलत धारणाएँ")}</h4>
           <ul className="space-y-1 text-sm">
             {data.misconceptions.map((m) => (
               <li key={m.id}>
@@ -276,31 +280,31 @@ export function LessonPlanCard({
 
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-sm font-semibold">Timeline</h4>
-            <span className="text-xs text-muted-foreground">{totalMinutes} min total</span>
+            <h4 className="text-sm font-semibold">{tx(lang, "Timeline", "समय-सारिणी")}</h4>
+            <span className="text-xs text-muted-foreground">{totalMinutes} {tx(lang, "min total", "मिनट कुल")}</span>
           </div>
           <ol className="space-y-4">
             {data.sections.map((s) => (
               <li key={s.id} className="rounded-md border p-3">
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm font-medium">
-                    {PHASE_LABEL[s.phase] ?? s.phase}: {s.title}
+                    {phaseLabel(s.phase, lang) ?? s.phase}: {s.title}
                   </span>
-                  <Badge variant="secondary">{s.minutes} min</Badge>
+                  <Badge variant="secondary">{s.minutes} {tx(lang, "min", "मिनट")}</Badge>
                 </div>
                 <p className="text-sm">
-                  <span className="font-medium">Teacher says: </span>
+                  <span className="font-medium">{tx(lang, "Teacher says: ", "शिक्षक कहेंगे: ")}</span>
                   {s.teacherSays}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">Students do: </span>
+                  <span className="font-medium text-foreground">{tx(lang, "Students do: ", "विद्यार्थी करेंगे: ")}</span>
                   {s.studentsDo}
                 </p>
                 {s.materials.length > 0 && (
-                  <p className="mt-1 text-xs text-muted-foreground">Materials: {s.materials.join(", ")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{tx(lang, "Materials: ", "सामग्री: ")}{s.materials.join(", ")}</p>
                 )}
                 {s.checkForUnderstanding && (
-                  <p className="mt-1 text-xs italic text-muted-foreground">Check: {s.checkForUnderstanding}</p>
+                  <p className="mt-1 text-xs italic text-muted-foreground">{tx(lang, "Check: ", "जाँच: ")}{s.checkForUnderstanding}</p>
                 )}
               </li>
             ))}
@@ -308,7 +312,7 @@ export function LessonPlanCard({
         </section>
 
         <section>
-          <h4 className="mb-1 text-sm font-semibold">Homework</h4>
+          <h4 className="mb-1 text-sm font-semibold">{tx(lang, "Homework", "गृहकार्य")}</h4>
           <p className="text-sm text-muted-foreground">{data.homework}</p>
         </section>
       </CardContent>

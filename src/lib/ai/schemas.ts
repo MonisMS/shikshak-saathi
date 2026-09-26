@@ -201,6 +201,17 @@ export const MultiGrade = z.object({
   blackboard: BlackboardLayout, // one column per grade
 });
 
+/* ---------- Scanned answer sheet (print & scan test flow) ---------- */
+export const ScannedAnswer = z.object({
+  questionId: z.string(),
+  answer: z.string().describe("What the student marked/wrote for this question. Empty string if left blank or unreadable."),
+  uncertain: z.boolean().describe("True if the mark/handwriting was ambiguous and the teacher should double-check it"),
+});
+export const ScannedSheet = z.object({
+  studentName: z.string().describe("The name written at the top of the sheet. 'Unknown' if not legible."),
+  answers: z.array(ScannedAnswer),
+});
+
 /* ---------- Test evaluation (AI-graded open-ended answers) ---------- */
 export const EvaluatedAnswer = z.object({
   questionId: z.string(),

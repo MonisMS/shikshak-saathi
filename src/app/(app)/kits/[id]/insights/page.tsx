@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireTeacher } from "@/lib/session";
+import { tx } from "@/lib/i18n";
 import { getKitForTeacher } from "@/lib/scope";
 import { prisma } from "@/lib/db";
 import { SectionStatus, SectionType } from "@/generated/prisma/client";
@@ -18,6 +19,7 @@ import { InsightsView } from "@/components/results/insights-view";
 export default async function InsightsPage(props: PageProps<"/kits/[id]/insights">) {
   const { id } = await props.params;
   const teacher = await requireTeacher();
+  const lang = teacher.uiLanguage === "hi" ? "hi" : "en";
 
   let kit;
   try {
@@ -32,7 +34,7 @@ export default async function InsightsPage(props: PageProps<"/kits/[id]/insights
   const plan = planSection ? LessonPlan.safeParse(planSection.content) : undefined;
 
   if (!quiz?.success || !plan?.success) {
-    return <p className="text-sm text-muted-foreground">Generate the lesson plan and exit quiz first.</p>;
+    return <p className="text-sm text-muted-foreground">{tx(lang, "Generate the lesson plan and exit quiz first.", "पहले पाठ योजना और निकास प्रश्नोत्तरी बनाएँ.")}</p>;
   }
 
   const session = await prisma.quizSession.findFirst({
@@ -44,9 +46,9 @@ export default async function InsightsPage(props: PageProps<"/kits/[id]/insights
   if (!session) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">No quiz results recorded yet.</p>
+        <p className="text-sm text-muted-foreground">{tx(lang, "No quiz results recorded yet.", "अभी कोई परिणाम दर्ज नहीं हुआ.")}</p>
         <Link href={`/kits/${kit.id}/results`} className="text-sm underline">
-          Enter results
+          {tx(lang, "Enter results", "परिणाम दर्ज करें")}
         </Link>
       </div>
     );

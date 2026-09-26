@@ -40,6 +40,19 @@ export function worksheetMaxMarks(questions: WQuestion[]): number {
   return questions.reduce((sum, q) => sum + q.marks, 0);
 }
 
+/** A printed sheet shows worksheet options as an A/B/C/D list (see PrintWorksheet's
+ * `list-[upper-alpha]`), but the underlying answer key is the option's full text, not
+ * a letter — so OCR reading a circled "B" off the paper needs mapping back to
+ * `options[1]` before it can be compared against the key. Online submissions never
+ * hit this (the attempt form stores full option text directly), only scanned ones. */
+export function resolveScannedWorksheetAnswer(q: WQuestion, raw: string): string {
+  if (!q.options?.length) return raw;
+  const letter = raw.trim().replace(/[().]/g, "").toUpperCase();
+  if (!/^[A-D]$/.test(letter)) return raw;
+  const index = letter.charCodeAt(0) - "A".charCodeAt(0);
+  return q.options[index] ?? raw;
+}
+
 /** Quiz (MCQ) questions are worth 1 mark each — there's no `marks` field on QuizQuestion. */
 export function gradeQuizSubmission(quiz: QuizData, answers: Record<string, string>): { perQuestion: Record<string, PerQuestionResult>; autoMarks: number; maxMarks: number } {
   const perQuestion: Record<string, PerQuestionResult> = {};

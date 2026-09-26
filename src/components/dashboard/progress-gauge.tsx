@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "motion/react";
+import { tx, type Lang } from "@/lib/i18n";
 
 // Semicircle from (10,100) to (190,100), radius 90.
 const ARC = "M 10 100 A 90 90 0 0 1 190 100";
 
-export function ProgressGauge({ withResults, ready, total }: { withResults: number; ready: number; total: number }) {
+export function ProgressGauge({ withResults, ready, total, lang }: { withResults: number; ready: number; total: number; lang: Lang }) {
   const safe = Math.max(total, 1);
   const a = withResults / safe;
   const b = ready / safe;
@@ -44,13 +45,13 @@ export function ProgressGauge({ withResults, ready, total }: { withResults: numb
         </svg>
         <div className="absolute inset-x-0 bottom-0 text-center">
           <p className="text-4xl font-semibold tracking-tight">{pct}%</p>
-          <p className="text-xs text-muted-foreground">kits with results</p>
+          <p className="text-xs text-muted-foreground">{tx(lang, "kits with results", "किट्स के परिणाम आए")}</p>
         </div>
       </div>
       <div className="mt-5 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[oklch(0.44_0.1_157)]" />Results in</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[oklch(0.3_0.07_160)]" />Ready to teach</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[repeating-linear-gradient(135deg,var(--muted-foreground)_0_1px,transparent_1px_3px)]" />Draft</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[oklch(0.44_0.1_157)]" />{tx(lang, "Results in", "परिणाम आए")}</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[oklch(0.3_0.07_160)]" />{tx(lang, "Ready to teach", "पढ़ाने को तैयार")}</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[repeating-linear-gradient(135deg,var(--muted-foreground)_0_1px,transparent_1px_3px)]" />{tx(lang, "Draft", "ड्राफ़्ट")}</span>
       </div>
     </div>
   );

@@ -158,7 +158,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
       system: built.system,
       user: built.user,
       // PARENT_NOTE is a short summary, not full generation — use the fast/cheap model (§7.2).
-      model: sectionType === SectionType.PARENT_NOTE ? MODEL_FAST : undefined,
+      // Short outputs go to the fast model (≈2–6 s vs ≈5–13 s); plan/worksheet/quiz keep the main model.
+      model: sectionType === SectionType.PARENT_NOTE || sectionType === SectionType.OBJECTIVES ? MODEL_FAST : undefined,
       demoCache: kit.chapter ? { chapterId: kit.chapter.id, sectionType } : undefined,
     });
 

@@ -99,6 +99,7 @@ export function AppSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function SidebarPromo() {
+  const { lang } = useLanguage();
   return (
     <div className="relative overflow-hidden rounded-2xl bg-[radial-gradient(120%_90%_at_100%_100%,oklch(0.5_0.12_155),oklch(0.24_0.05_160)_70%)] p-4 text-white">
       <svg aria-hidden className="pointer-events-none absolute inset-0 size-full opacity-25" viewBox="0 0 200 160" preserveAspectRatio="none">
@@ -109,13 +110,13 @@ export function SidebarPromo() {
       <span className="relative grid size-7 place-items-center rounded-full bg-white/15">
         <Sparkles className="size-3.5" />
       </span>
-      <p className="relative mt-3 text-[15px] leading-snug font-semibold">One chapter in, a full kit out</p>
-      <p className="relative mt-1 text-xs text-white/70">Plan, worksheet and quiz in about 90 seconds.</p>
+      <p className="relative mt-3 text-[15px] leading-snug font-semibold">{lang === "hi" ? "एक अध्याय दें, पूरी किट पाएँ" : "One chapter in, a full kit out"}</p>
+      <p className="relative mt-1 text-xs text-white/70">{lang === "hi" ? "योजना, कार्यपत्रक और क्विज़ — लगभग 90 सेकंड में।" : "Plan, worksheet and quiz in about 90 seconds."}</p>
       <Link
         href="/kits/new"
         className="relative mt-4 flex h-9 items-center justify-center rounded-full bg-[oklch(0.44_0.1_157)] text-sm font-medium transition-colors hover:bg-[oklch(0.5_0.11_157)]"
       >
-        Create a kit
+        {lang === "hi" ? "किट बनाएँ" : "Create a kit"}
       </Link>
     </div>
   );

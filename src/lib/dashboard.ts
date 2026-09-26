@@ -5,7 +5,8 @@ import { prisma } from "@/lib/db";
  * page (renders it directly) and `GET /api/dashboard` (returns it as JSON) so both
  * stay in sync from one query set.
  */
-export async function getDashboardData(teacherId: string) {
+export async function getDashboardData(teacherId: string, classroomId?: string) {
+  const kitWhere = { teacherId, ...(classroomId ? { classroomId } : {}) };
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const startOfToday = new Date(now);
@@ -33,32 +34,32 @@ export async function getDashboardData(teacherId: string) {
     pendingResultsKits,
     topMisconceptions,
   ] = await Promise.all([
-    prisma.lessonKit.findMany({ where: { teacherId, createdAt: { gte: weekStart } }, select: { createdAt: true } }),
-    prisma.lessonKit.count({ where: { teacherId, status: "READY", quizSessions: { none: {} } } }),
-    prisma.lessonKit.count({ where: { teacherId, quizSessions: { some: {} } } }),
-    prisma.lessonKit.count({ where: { teacherId } }),
-    prisma.lessonKit.count({ where: { teacherId, createdAt: { gte: sevenDaysAgo } } }),
-    prisma.kitSection.count({ where: { type: { in: ["WORKSHEET", "EXIT_QUIZ"] }, status: "READY", kit: { teacherId } } }),
+    prisma.lessonKit.findMany({ where: { ...kitWhere, createdAt: { gte: weekStart } }, select: { createdAt: true } }),
+    prisma.lessonKit.count({ where: { ...kitWhere, status: "READY", quizSessions: { none: {} } } }),
+    prisma.lessonKit.count({ where: { ...kitWhere, quizSessions: { some: {} } } }),
+    prisma.lessonKit.count({ where: kitWhere }),
+    prisma.lessonKit.count({ where: { ...kitWhere, createdAt: { gte: sevenDaysAgo } } }),
+    prisma.kitSection.count({ where: { type: { in: ["WORKSHEET", "EXIT_QUIZ"] }, status: "READY", kit: kitWhere } }),
     prisma.activityLog.aggregate({ where: { teacherId }, _sum: { minutesSavedEstimate: true } }),
     prisma.lessonKit.findMany({
-      where: { teacherId },
+      where: kitWhere,
       orderBy: { createdAt: "desc" },
       take: 5,
       select: { id: true, title: true, status: true, quizSessions: { select: { id: true }, take: 1 } },
     }),
     prisma.lessonKit.findMany({
-      where: { teacherId, scheduledFor: { gte: startOfToday, lt: endOfTomorrow } },
+      where: { ...kitWhere, scheduledFor: { gte: startOfToday, lt: endOfTomorrow } },
       orderBy: { scheduledFor: "asc" },
       select: { id: true, title: true, scheduledFor: true, fixesIncluded: { select: { id: true }, take: 1 } },
     }),
     prisma.lessonKit.findMany({
-      where: { teacherId, scheduledFor: { lt: startOfToday }, quizSessions: { none: {} } },
+      where: { ...kitWhere, scheduledFor: { lt: startOfToday }, quizSessions: { none: {} } },
       orderBy: { scheduledFor: "desc" },
       take: 5,
       select: { id: true, title: true, scheduledFor: true },
     }),
     prisma.misconception.findMany({
-      where: { status: "OPEN", kit: { teacherId } },
+      where: { status: "OPEN", kit: kitWhere },
       orderBy: { percent: "desc" },
       take: 3,
       select: { id: true, label: true, percent: true, kit: { select: { id: true, title: true } } },

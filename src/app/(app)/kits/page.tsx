@@ -7,6 +7,8 @@ export default async function KitsPage({ searchParams }: PageProps<"/kits">) {
   const teacher = await requireTeacher();
   const q = (await searchParams).q;
   const initialSearch = typeof q === "string" ? q : "";
+  const cls = (await searchParams).class;
+  const initialClassroom = typeof cls === "string" ? cls : undefined;
 
   const [kits, classrooms] = await Promise.all([
     prisma.lessonKit.findMany({
@@ -32,5 +34,5 @@ export default async function KitsPage({ searchParams }: PageProps<"/kits">) {
     createdAt: k.createdAt.toISOString(),
   }));
 
-  return <KitsListView key={initialSearch} initialKits={rows} classrooms={classrooms} initialSearch={initialSearch} />;
+  return <KitsListView key={`${initialSearch}|${initialClassroom}`} initialKits={rows} classrooms={classrooms} initialSearch={initialSearch} initialClassroom={initialClassroom} />;
 }

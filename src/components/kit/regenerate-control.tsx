@@ -4,6 +4,8 @@ import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx } from "@/lib/i18n";
 
 /** F20: regenerate with an optional free-text instruction ("make it easier"). */
 export function RegenerateControl({
@@ -13,6 +15,7 @@ export function RegenerateControl({
   onRegenerate: (instruction?: string) => Promise<void>;
   disabled?: boolean;
 }) {
+  const { lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,7 +34,7 @@ export function RegenerateControl({
   if (!open) {
     return (
       <Button variant="outline" size="sm" onClick={() => setOpen(true)} disabled={disabled}>
-        <RefreshCw className="size-4" /> Regenerate
+        <RefreshCw className="size-4" /> {tx(lang, "Regenerate", "फिर से बनाएँ")}
       </Button>
     );
   }
@@ -41,14 +44,14 @@ export function RegenerateControl({
       <Input
         value={instruction}
         onChange={(e) => setInstruction(e.target.value)}
-        placeholder='Optional instruction, e.g. "make it easier"'
+        placeholder={tx(lang, 'Optional instruction, e.g. "make it easier"', 'निर्देश (वैकल्पिक), जैसे "इसे आसान बनाओ"')}
         className="w-64"
       />
       <Button size="sm" onClick={run} disabled={busy}>
-        {busy ? "Regenerating…" : "Go"}
+        {busy ? tx(lang, "Regenerating…", "बनाया जा रहा है…") : tx(lang, "Go", "बनाएँ")}
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
-        Cancel
+        {tx(lang, "Cancel", "रद्द करें")}
       </Button>
     </div>
   );

@@ -12,6 +12,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ListEditor } from "./list-editor";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx } from "@/lib/i18n";
 
 type QuizData = z.infer<typeof Quiz>;
 type Question = QuizData["questions"][number];
@@ -32,6 +34,7 @@ export function QuizCard({
   stale?: boolean;
   onRegenerate?: () => Promise<void>;
 }) {
+  const { lang } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<QuizData>(data);
   const [saving, setSaving] = useState(false);
@@ -61,13 +64,13 @@ export function QuizCard({
     }
   }
 
-  const heading = title ?? (data.kind === "exit" ? "Exit quiz" : "Starter quiz");
+  const heading = title ?? (data.kind === "exit" ? tx(lang, "Exit quiz", "निकास प्रश्नोत्तरी") : tx(lang, "Starter quiz", "आरंभिक प्रश्नोत्तरी"));
 
   if (editing) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{heading} (editing)</CardTitle>
+          <CardTitle>{heading} {tx(lang, "(editing)", "(संपादन)")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <ListEditor<Question>
@@ -80,21 +83,21 @@ export function QuizCard({
               bloom: "understand",
               options: OPTION_IDS.map((id, i) => ({ id, text: "", correct: i === 0 })),
             })}
-            addLabel="Add question"
+            addLabel={tx(lang, "Add question", "प्रश्न जोड़ें")}
             renderItem={(q, onChange) => (
               <>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{q.id}</Badge>
-                  <Input value={q.objectiveId} onChange={(e) => onChange({ ...q, objectiveId: e.target.value })} placeholder="Objective id" className="w-32" />
+                  <Input value={q.objectiveId} onChange={(e) => onChange({ ...q, objectiveId: e.target.value })} placeholder={tx(lang, "Objective id", "उद्देश्य id")} className="w-32" />
                   <Input
                     type="number"
                     value={q.pageRef ?? ""}
                     onChange={(e) => onChange({ ...q, pageRef: e.target.value ? Number(e.target.value) : undefined })}
-                    placeholder="Page ref"
+                    placeholder={tx(lang, "Page ref", "पृष्ठ")}
                     className="w-24"
                   />
                 </div>
-                <Textarea value={q.stem} onChange={(e) => onChange({ ...q, stem: e.target.value })} placeholder="Question stem" />
+                <Textarea value={q.stem} onChange={(e) => onChange({ ...q, stem: e.target.value })} placeholder={tx(lang, "Question stem", "प्रश्न")} />
                 <div className="space-y-2">
                   {q.options.map((opt, oi) => (
                     <div key={opt.id} className="flex items-center gap-2">
@@ -115,7 +118,7 @@ export function QuizCard({
                         onChange={(e) =>
                           onChange({ ...q, options: q.options.map((o, j) => (j === oi ? { ...o, text: e.target.value } : o)) })
                         }
-                        placeholder={opt.correct ? "Correct answer" : "Distractor"}
+                        placeholder={opt.correct ? tx(lang, "Correct answer", "सही उत्तर") : tx(lang, "Distractor", "गलत विकल्प")}
                         className="flex-1"
                       />
                       {!opt.correct && (
@@ -133,7 +136,7 @@ export function QuizCard({
                             onChange={(e) =>
                               onChange({ ...q, options: q.options.map((o, j) => (j === oi ? { ...o, whyWrong: e.target.value } : o)) })
                             }
-                            placeholder="Why wrong"
+                            placeholder={tx(lang, "Why wrong", "क्यों गलत")}
                             className="w-40"
                           />
                         </>
@@ -147,10 +150,10 @@ export function QuizCard({
 
           <div className="flex gap-2">
             <Button size="sm" onClick={save} disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? tx(lang, "Saving…", "सहेजा जा रहा है…") : tx(lang, "Save", "सहेजें")}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
-              Cancel
+              {tx(lang, "Cancel", "रद्द करें")}
             </Button>
           </div>
         </CardContent>
@@ -165,7 +168,7 @@ export function QuizCard({
         {onSave && (
           <CardAction>
             <Button variant="outline" size="sm" onClick={startEdit}>
-              Edit
+              {tx(lang, "Edit", "संपादित करें")}
             </Button>
           </CardAction>
         )}
@@ -174,12 +177,12 @@ export function QuizCard({
         {stale && (
           <Alert variant="destructive">
             <AlertTriangle className="size-4" />
-            <AlertTitle>This quiz may be out of date</AlertTitle>
+            <AlertTitle>{tx(lang, "This quiz may be out of date", "यह प्रश्नोत्तरी पुरानी हो सकती है")}</AlertTitle>
             <AlertDescription className="flex items-center justify-between gap-2">
-              <span>The lesson plan changed since this quiz was written.</span>
+              <span>{tx(lang, "The lesson plan changed since this quiz was written.", "यह प्रश्नोत्तरी बनने के बाद पाठ योजना बदल गई है।")}</span>
               {onRegenerate && (
                 <Button size="sm" variant="outline" onClick={regenerate} disabled={regenerating}>
-                  {regenerating ? "Regenerating…" : "Regenerate"}
+                  {regenerating ? tx(lang, "Regenerating…", "बनाया जा रहा है…") : tx(lang, "Regenerate", "फिर से बनाएँ")}
                 </Button>
               )}
             </AlertDescription>

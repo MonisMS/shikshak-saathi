@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { FadeIn } from "@/components/motion/fade-in";
 import { TestShare } from "./test-share";
+import { ScanUploadCard } from "./scan-upload-card";
 import { cn } from "@/lib/utils";
 import type { PerQuestionResult } from "@/lib/tests";
 
@@ -29,6 +30,7 @@ interface TestMeta {
 interface SubmissionRow {
   id: string;
   studentName: string;
+  source: "ONLINE" | "SCAN";
   answers: Record<string, string>;
   perQuestion: Record<string, PerQuestionResult>;
   autoMarks: number;
@@ -119,19 +121,35 @@ export function TestDetailView({ test, submissions }: { test: TestMeta; submissi
         <h1 className="text-2xl font-semibold tracking-tight">Results</h1>
       </FadeIn>
 
-      <FadeIn index={1}>
+      <FadeIn index={1} className="space-y-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          How students attempt this — pick either, or both
+        </h2>
+
         <Card className="border-border/70">
           <CardHeader>
-            <CardTitle className="text-base">Share with students</CardTitle>
+            <CardTitle className="text-base">Option 1 · Online link (optional)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <TestShare token={test.token} />
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-secondary/40 px-3 py-2.5">
               <Label htmlFor="test-open" className="text-sm">
-                Accepting new responses
+                Accepting new online responses
               </Label>
               <Switch id="test-open" checked={isOpen} onCheckedChange={toggleOpen} />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70">
+          <CardHeader>
+            <CardTitle className="text-base">Option 2 · Print, fill on paper, scan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScanUploadCard
+              testId={test.id}
+              printHref={`/kits/${test.kitId}/print?doc=${test.sectionType === "WORKSHEET" ? "worksheet" : "quiz"}&onepage=1`}
+            />
           </CardContent>
         </Card>
       </FadeIn>
@@ -180,7 +198,7 @@ export function TestDetailView({ test, submissions }: { test: TestMeta; submissi
         </div>
 
         {submissions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No one has submitted yet. Share the link or QR code above.</p>
+          <p className="text-sm text-muted-foreground">No one has submitted yet. Share the link, or print and scan — either shows up here.</p>
         ) : (
           <div className="space-y-2">
             {submissions.map((s) => {
@@ -193,7 +211,14 @@ export function TestDetailView({ test, submissions }: { test: TestMeta; submissi
                     onClick={() => setExpanded(open ? null : s.id)}
                     className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
                   >
-                    <span className="min-w-0 truncate text-sm font-medium">{s.studentName}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 truncate text-sm font-medium">{s.studentName}</span>
+                      {s.source === "SCAN" && (
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          Scanned
+                        </Badge>
+                      )}
+                    </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <span className="text-sm tabular-nums text-muted-foreground">
                         {total}/{s.maxMarks}

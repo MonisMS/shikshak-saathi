@@ -31,11 +31,25 @@ function jsonSchemaOf(schema: z.ZodType) {
   return js;
 }
 
-/** 429/RESOURCE_EXHAUSTED and 5xx are worth rotating to the next key for; anything else isn't. */
+/** 429/RESOURCE_EXHAUSTED, 5xx and our own timeout are worth rotating to the next key for; anything else isn't. */
 function isRetryableGeminiError(e: unknown): boolean {
   if (e instanceof ApiError) return e.status === 429 || e.status >= 500;
+  if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) return true;
+  return /429|RESOURCE_EXHAUSTED|aborted|timed? ?out/i.test(e instanceof Error ? e.message : String(e));
+}
+
+function isQuotaError(e: unknown): boolean {
+  if (e instanceof ApiError) return e.status === 429;
   return /429|RESOURCE_EXHAUSTED/i.test(e instanceof Error ? e.message : String(e));
 }
+
+/** key|model pairs that just hit their quota — skipped for a minute instead of being retried on every request. */
+const COOLDOWN_MS = 60_000;
+const cooldownUntil = new Map<string, number>();
+const coolingDown = (key: string, model: string) => (cooldownUntil.get(`${key}|${model}`) ?? 0) > Date.now();
+
+/** Per-attempt cap so one stalled request fails over instead of eating the whole route budget. */
+const CALL_TIMEOUT_MS = 40_000;
 
 export interface GenerateJSONResult<T> {
   data: T;
@@ -83,6 +97,7 @@ async function callGemini<T extends z.ZodType>(
         responseJsonSchema: jsonSchemaOf(opts.schema),
         temperature: 0.4,
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
       },
     });
 
@@ -131,11 +146,13 @@ export async function generateJSON<T extends z.ZodType>(opts: {
 
   for (const m of MODEL_CHAIN(model)) {
     for (const apiKey of KEYS) {
+      if (coolingDown(apiKey, m)) continue;
       try {
         const result = await callGemini({ schema: opts.schema, system: opts.system, user: opts.user, parts: opts.parts, model: m, apiKey });
         return { ...result, model: m, fromCache: false };
       } catch (e) {
         lastError = e;
+        if (isQuotaError(e)) cooldownUntil.set(`${apiKey}|${m}`, Date.now() + COOLDOWN_MS);
         if (!isRetryableGeminiError(e)) break; // not a quota/outage problem — try the next model instead
       }
     }

@@ -1,7 +1,7 @@
 import * as z from "zod";
 import JSZip from "jszip";
 import { getDocumentProxy, extractText } from "unpdf";
-import { generateJSON, MODEL } from "@/lib/ai/gemini";
+import { generateJSON, MODEL_FAST } from "@/lib/ai/gemini";
 import type { SourcePageData } from "@/lib/kit-source";
 
 const PAGE_CHARS = 2500;
@@ -42,7 +42,7 @@ async function geminiExtract(kind: "ocr" | "pdf" | "audio", mimeType: string, by
     schema: Extracted,
     system,
     user,
-    model: MODEL,
+    model: MODEL_FAST,
     parts: [{ inlineData: { mimeType, data: bytes.toString("base64") } }],
   });
   return result.data.pages.map((p) => p.trim()).filter(Boolean);

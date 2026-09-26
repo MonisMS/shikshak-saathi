@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TapScale } from "@/components/motion/tap-scale";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/layout/language-provider";
+import { tx } from "@/lib/i18n";
 
 type QuizData = z.infer<typeof Quiz>;
 const OFFLINE_KEY_PREFIX = "shikshak-pending-results-";
@@ -23,6 +25,7 @@ const OFFLINE_KEY_PREFIX = "shikshak-pending-results-";
  * automatically the next time the browser comes back online. */
 export function TallyGrid({ kitId, title, quiz }: { kitId: string; title: string; quiz: QuizData }) {
   const router = useRouter();
+  const { lang } = useLanguage();
   const [studentsPresent, setStudentsPresent] = useState(40);
   const [tally, setTally] = useState<Record<string, Record<string, number>>>(() =>
     Object.fromEntries(quiz.questions.map((q) => [q.id, Object.fromEntries(q.options.map((o) => [o.id, 0]))])),
@@ -80,11 +83,11 @@ export function TallyGrid({ kitId, title, quiz }: { kitId: string; title: string
         const data: unknown = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string })?.error ?? `Failed (${res.status})`);
       }
-      toast.success("Results saved");
+      toast.success(tx(lang, "Results saved", "परिणाम सहेजे गए"));
       router.push(`/kits/${kitId}/insights`);
     } catch {
       localStorage.setItem(OFFLINE_KEY_PREFIX + kitId, JSON.stringify(payload));
-      toast.message("Saved on this phone — will sync when you're back online");
+      toast.message(tx(lang, "Saved on this phone — will sync when you're back online", "इस फ़ोन पर सहेजा गया — इंटरनेट आने पर भेज दिया जाएगा"));
       router.push(`/kits/${kitId}`);
     } finally {
       setSaving(false);
@@ -96,14 +99,14 @@ export function TallyGrid({ kitId, title, quiz }: { kitId: string; title: string
       {!online && (
         <div className="flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
           <WifiOff className="size-4 shrink-0" />
-          Offline — your taps are saved on this phone and will sync later.
+          {tx(lang, "Offline — your taps are saved on this phone and will sync later.", "ऑफ़लाइन — आपकी गिनती इस फ़ोन पर सहेजी है, बाद में भेज दी जाएगी.")}
         </div>
       )}
 
       <div className="space-y-1">
         <h1 className="text-lg font-semibold leading-tight">{title}</h1>
         <p className="text-sm text-muted-foreground">
-          Question {index + 1} of {quiz.questions.length}
+          {tx(lang, `Question ${index + 1} of ${quiz.questions.length}`, `प्रश्न ${index + 1} / ${quiz.questions.length}`)}
         </p>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <motion.div
@@ -116,7 +119,7 @@ export function TallyGrid({ kitId, title, quiz }: { kitId: string; title: string
 
       <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-card px-3 py-2">
         <Label htmlFor="present" className="text-sm text-muted-foreground">
-          Students present
+          {tx(lang, "Students present", "उपस्थित छात्र")}
         </Label>
         <Input
           id="present"
@@ -156,7 +159,7 @@ export function TallyGrid({ kitId, title, quiz }: { kitId: string; title: string
                     </span>
                     {o.correct && (
                       <span className="ml-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                        <Check className="size-2.5" /> Correct
+                        <Check className="size-2.5" /> {tx(lang, "Correct", "सही")}
                       </span>
                     )}
                   </div>
@@ -181,16 +184,16 @@ export function TallyGrid({ kitId, title, quiz }: { kitId: string; title: string
             })}
           </div>
 
-          <p className="text-right text-xs text-muted-foreground">{responsesThisQuestion} responses recorded</p>
+          <p className="text-right text-xs text-muted-foreground">{tx(lang, `${responsesThisQuestion} responses recorded`, `${responsesThisQuestion} उत्तर दर्ज`)}</p>
         </motion.div>
       </AnimatePresence>
 
       <div className="flex items-center gap-2">
         <Button type="button" variant="outline" size="lg" className="flex-1" onClick={skip} disabled={saving}>
-          Skip question
+          {tx(lang, "Skip question", "प्रश्न छोड़ें")}
         </Button>
         <Button type="button" size="lg" className="flex-1" onClick={goNext} disabled={saving}>
-          {isLast ? (saving ? "Finishing…" : "Finish check") : "Next question"}
+          {isLast ? (saving ? tx(lang, "Finishing…", "पूरा कर रहे हैं…") : tx(lang, "Finish check", "जाँच पूरी करें")) : tx(lang, "Next question", "अगला प्रश्न")}
         </Button>
       </div>
     </div>
