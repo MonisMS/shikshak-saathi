@@ -30,21 +30,10 @@ const DB_TO_UI: Record<SectionStatus, SectionUiStatus> = {
   FAILED: "failed",
 };
 
-/** OBJECTIVES → LESSON_PLAN → (everything else in parallel) → PARENT_NOTE → validate/repair (§10.1). */
-const PIPELINE_ORDER: SectionType[][] = [
-  [SectionType.OBJECTIVES],
-  [SectionType.LESSON_PLAN],
-  [
-    SectionType.WORKSHEET,
-    SectionType.EXIT_QUIZ,
-    SectionType.STARTER_QUIZ,
-    SectionType.SUMMATIVE,
-    SectionType.MULTIGRADE,
-    SectionType.BLACKBOARD,
-    SectionType.REMEDIAL,
-  ],
-  [SectionType.PARENT_NOTE],
-];
+/** Generated automatically when the kit opens; everything else is on demand. */
+export const CORE_SECTIONS: SectionType[] = [SectionType.OBJECTIVES, SectionType.LESSON_PLAN];
+/** Offered as "Generate" buttons once the lesson plan is ready — the teacher chooses. */
+export const OPTIONAL_SECTIONS: SectionType[] = [SectionType.WORKSHEET, SectionType.EXIT_QUIZ, SectionType.PARENT_NOTE];
 
 async function postSection(kitId: string, type: SectionType, body: Record<string, unknown> = {}) {
   const res = await fetch(`/api/kits/${kitId}/sections/${type}`, {
@@ -93,7 +82,16 @@ export function useKitGeneration(kit: KitForGeneration) {
   const [sections, setSections] = useState<Record<string, SectionState>>(() => {
     const init: Record<string, SectionState> = {};
     for (const s of kit.sections) {
-      init[s.type] = { status: DB_TO_UI[s.status], content: s.content ?? undefined, error: s.error ?? undefined };
+      const ui = DB_TO_UI[s.status];
+      const optional = OPTIONAL_SECTIONS.includes(s.type);
+      init[s.type] = {
+        status: optional && (ui === "queued" || ui === "writing") ? "idle" : ui,
+        content: s.content ?? undefined,
+        error: s.error ?? undefined,
+      };
+    }
+    for (const type of OPTIONAL_SECTIONS) {
+      if (!(type in init)) init[type] = { status: "idle" };
     }
     return init;
   });
@@ -123,57 +121,25 @@ export function useKitGeneration(kit: KitForGeneration) {
     [kit.id],
   );
 
-  const runIfNeeded = useCallback(
-    async (type: SectionType) => {
-      if (!present(type)) return true; // this kit didn't select this section
-      if (sections[type]?.status === "done") return true; // resume support
-      return runOne(type);
-    },
-    [present, sections, runOne],
-  );
-
   const start = useCallback(async () => {
-    const [objectivesStep, planStep, parallelStep, parentNoteStep] = PIPELINE_ORDER;
-
-    const objectivesOk = await runIfNeeded(objectivesStep[0]);
-    if (!objectivesOk) return;
-
-    if (present(planStep[0])) {
-      const planOk = await runIfNeeded(planStep[0]);
-      if (!planOk) return;
+    const generatedNow: SectionType[] = [];
+    for (const type of CORE_SECTIONS) {
+      if (!present(type)) continue;
+      if (sections[type]?.status === "done") continue; // resume support
+      const ok = await runOne(type);
+      if (!ok) return;
+      generatedNow.push(type);
     }
 
-    await Promise.allSettled(parallelStep.filter(present).map((type) => runIfNeeded(type)));
-    await Promise.allSettled(parentNoteStep.filter(present).map((type) => runIfNeeded(type)));
-
-    setSections((prev) => {
-      const next = { ...prev };
-      for (const type of Object.keys(next)) {
-        if (next[type].status === "done") next[type] = { ...next[type], status: "checking" };
-      }
-      return next;
-    });
-
     const validation = await refreshValidation();
-    const failedByType = validation?.failedByType ?? {};
-
-    const anyRepair = Object.values(failedByType).some((rules) => rules && rules.length > 0);
-    await Promise.allSettled(
-      Object.entries(failedByType).map(async ([type, rules]) => {
-        if (!rules || rules.length === 0) return;
-        await runOne(type as SectionType, { repair: rules });
-      }),
+    // One repair attempt, only for sections written in this visit — never silently rewrite reviewed content.
+    const repairs = Object.entries(validation?.failedByType ?? {}).filter(
+      ([type, rules]) => rules && rules.length > 0 && generatedNow.includes(type as SectionType),
     );
-    if (anyRepair) await refreshValidation(); // show what's still red after the one repair attempt
-
-    setSections((prev) => {
-      const next = { ...prev };
-      for (const type of Object.keys(next)) {
-        if (next[type].status === "checking") next[type] = { ...next[type], status: "done" };
-      }
-      return next;
-    });
-  }, [runIfNeeded, present, runOne, refreshValidation]);
+    if (repairs.length === 0) return;
+    await Promise.allSettled(repairs.map(([type, rules]) => runOne(type as SectionType, { repair: rules })));
+    await refreshValidation();
+  }, [present, sections, runOne, refreshValidation]);
 
   useEffect(() => {
     if (started.current) return;
@@ -200,5 +166,14 @@ export function useKitGeneration(kit: KitForGeneration) {
     [kit.id, refreshValidation],
   );
 
-  return { sections, checks, regenerate, retry: (type: SectionType) => runOne(type), save };
+  const generate = useCallback(
+    async (type: SectionType) => {
+      const success = await runOne(type);
+      if (success) await refreshValidation();
+      return success;
+    },
+    [runOne, refreshValidation],
+  );
+
+  return { sections, checks, generate, regenerate, retry: (type: SectionType) => runOne(type), save };
 }

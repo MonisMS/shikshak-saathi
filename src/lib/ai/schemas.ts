@@ -201,6 +201,16 @@ export const MultiGrade = z.object({
   blackboard: BlackboardLayout, // one column per grade
 });
 
+/* ---------- Test evaluation (AI-graded open-ended answers) ---------- */
+export const EvaluatedAnswer = z.object({
+  questionId: z.string(),
+  marksAwarded: z.number().min(0),
+  feedback: z.string().describe("One or two sentences the student/teacher can read — what was right/missing"),
+});
+export const Evaluation = z.object({
+  answers: z.array(EvaluatedAnswer),
+});
+
 /* ---------- Section schema map (one call per section, no whole-kit schema) ---------- */
 export const SECTION_SCHEMAS = {
   [SectionType.OBJECTIVES]: Objectives,

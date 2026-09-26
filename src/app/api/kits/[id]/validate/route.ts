@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readKitOptions } from "@/lib/kit-source";
 import { prisma } from "@/lib/db";
 import { getAuthedTeacher } from "@/lib/session";
 import { getKitForTeacher } from "@/lib/scope";
@@ -64,7 +65,7 @@ export async function POST(_req: Request, ctx: RouteContext<"/api/kits/[id]/vali
     exitQuiz,
     starterQuiz,
     multiGrade,
-    chapterPages: kit.chapter ? (kit.chapter.pagesEn as ChapterPage[]) : undefined,
+    chapterPages: kit.chapter ? (kit.chapter.pagesEn as ChapterPage[]) : readKitOptions(kit.options).source?.pages,
     periodMinutes: kit.periodMinutes,
     lowResource: kit.lowResource,
     language: kit.language,

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getAuthedTeacher } from "@/lib/session";
 import { getKitForTeacher } from "@/lib/scope";
 import { toPromptText, type ChapterPage } from "@/lib/chapters";
+import { readKitOptions } from "@/lib/kit-source";
 import {
   RevisionSource,
   SectionStatus,
@@ -103,14 +104,19 @@ export async function POST(req: Request, ctx: RouteContext<"/api/kits/[id]/secti
     await prisma.kitSection.update({ where: { id: sectionId }, data: { status: SectionStatus.GENERATING, error: null } });
   }
 
+  const kitOptions = readKitOptions(kit.options);
   const promptCtx: PromptContext = {
-    grade: kit.classroom?.grades[0] ?? kit.chapter?.grade ?? 7,
-    subject: kit.classroom?.subject ?? kit.chapter?.subject ?? "General",
+    grade: kit.chapter?.grade ?? kitOptions.grade ?? kit.classroom?.grades[0] ?? 7,
+    subject: kit.chapter?.subject ?? kitOptions.subject ?? kit.classroom?.subject ?? "General",
     language: kit.language,
     classSize: kit.classSize,
     periodMinutes: kit.periodMinutes,
     lowResource: kit.lowResource,
-    chapterText: kit.chapter ? toPromptText(sliceChapterPages(kit.chapter.pagesEn as ChapterPage[], kit.pageFrom, kit.pageTo)) : undefined,
+    chapterText: kit.chapter
+      ? toPromptText(sliceChapterPages(kit.chapter.pagesEn as ChapterPage[], kit.pageFrom, kit.pageTo))
+      : kitOptions.source
+        ? toPromptText(kitOptions.source.pages)
+        : undefined,
     topic: kit.topic ?? undefined,
   };
 

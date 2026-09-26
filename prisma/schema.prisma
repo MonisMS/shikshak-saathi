@@ -21,16 +21,16 @@ enum KitStatus {
 }
 
 enum SectionType {
-  OBJECTIVES          // learning outcomes + prior knowledge + keywords + expected misconceptions
-  LESSON_PLAN         // timed learning cycles (starter, explain, activity, practice, exit)
-  BLACKBOARD          // blackboard layout / low-resource visual (optional)
-  MULTIGRADE          // per-grade tasks for multi-grade rooms (optional)
-  WORKSHEET           // questions + answer key (same object → cannot disagree)
-  EXIT_QUIZ           // formative exit quiz: MCQ, each wrong option tagged with a misconception
-  STARTER_QUIZ        // prior-knowledge check quiz (optional)
-  SUMMATIVE           // end-of-chapter test / blueprint (optional)
-  REMEDIAL            // generic remedial activities (optional)
-  PARENT_NOTE         // homework summary for parents (optional)
+  OBJECTIVES // learning outcomes + prior knowledge + keywords + expected misconceptions
+  LESSON_PLAN // timed learning cycles (starter, explain, activity, practice, exit)
+  BLACKBOARD // blackboard layout / low-resource visual (optional)
+  MULTIGRADE // per-grade tasks for multi-grade rooms (optional)
+  WORKSHEET // questions + answer key (same object → cannot disagree)
+  EXIT_QUIZ // formative exit quiz: MCQ, each wrong option tagged with a misconception
+  STARTER_QUIZ // prior-knowledge check quiz (optional)
+  SUMMATIVE // end-of-chapter test / blueprint (optional)
+  REMEDIAL // generic remedial activities (optional)
+  PARENT_NOTE // homework summary for parents (optional)
 }
 
 enum SectionStatus {
@@ -103,9 +103,10 @@ model User {
   classrooms       Classroom[]
   kits             LessonKit[]
   activityLogs     ActivityLog[]
-  uploadedChapters Chapter[]       @relation("ChapterUploader")
+  uploadedChapters Chapter[]         @relation("ChapterUploader")
   generationLogs   GenerationLog[]
   classNotes       ClassNote[]
+  testPublications TestPublication[]
 
   @@map("user")
 }
@@ -184,9 +185,9 @@ model Classroom {
 
 /// Optional roster (roll numbers only — no student names needed; privacy).
 model Student {
-  id          String    @id @default(cuid())
+  id          String            @id @default(cuid())
   classroomId String
-  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  classroom   Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
   rollNo      Int
   grade       Int? // for multi-grade rooms
   displayName String? // optional, never sent to the AI
@@ -223,42 +224,43 @@ model Chapter {
 
 /// One generated teaching kit for one chapter (+ optional classroom).
 model LessonKit {
-  id            String     @id @default(cuid())
+  id            String      @id @default(cuid())
   teacherId     String
-  teacher       User       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacher       User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   classroomId   String?
-  classroom     Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  classroom     Classroom?  @relation(fields: [classroomId], references: [id], onDelete: SetNull)
   chapterId     String?
-  chapter       Chapter?   @relation(fields: [chapterId], references: [id])
+  chapter       Chapter?    @relation(fields: [chapterId], references: [id])
   title         String // "Class 7 Science Ch 3 — Heat (Day 1)"
   language      Language
-  status        KitStatus  @default(DRAFT)
-  periodMinutes Int        @default(40)
-  dayNumber     Int        @default(1) // day 2 kit carries yesterday's fixes
-  lowResource   Boolean    @default(true)
+  status        KitStatus   @default(DRAFT)
+  periodMinutes Int         @default(40)
+  dayNumber     Int         @default(1) // day 2 kit carries yesterday's fixes
+  lowResource   Boolean     @default(true)
   targetGrades  Int[] // multi-grade targets
   topic         String? // optional sub-topic / learning objective input
   teacherNote   String?
   pageFrom      Int?
   pageTo        Int?
-  classSize     Int        @default(40)
+  classSize     Int         @default(40)
   options       Json? // { sections, difficulty, localContext }
   scheduledFor  DateTime?
   diksha        Json?
-  version       Int        @default(1)
+  version       Int         @default(1)
   validation    Json? // last checker result: [{rule, pass, detail}]
   basedOnKitId  String? // previous day's kit whose quiz produced fixes
-  basedOnKit    LessonKit? @relation("KitChain", fields: [basedOnKitId], references: [id], onDelete: SetNull)
+  basedOnKit    LessonKit?  @relation("KitChain", fields: [basedOnKitId], references: [id], onDelete: SetNull)
   nextKits      LessonKit[] @relation("KitChain")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  sections       KitSection[]
-  quizSessions   QuizSession[]
-  misconceptions Misconception[]
-  fixesIncluded  FixActivity[]   @relation("FixTargetKit")
-  parentNotes    ParentNote[]
-  generationLogs GenerationLog[]
+  sections         KitSection[]
+  quizSessions     QuizSession[]
+  misconceptions   Misconception[]
+  fixesIncluded    FixActivity[]     @relation("FixTargetKit")
+  parentNotes      ParentNote[]
+  generationLogs   GenerationLog[]
+  testPublications TestPublication[]
 
   @@index([teacherId, createdAt])
   @@index([chapterId])
@@ -267,16 +269,16 @@ model LessonKit {
 
 /// One section of a kit. Regenerating = new revision, same row.
 model KitSection {
-  id              String        @id @default(cuid())
+  id              String            @id @default(cuid())
   kitId           String
-  kit             LessonKit     @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  kit             LessonKit         @relation(fields: [kitId], references: [id], onDelete: Cascade)
   type            SectionType
-  status          SectionStatus @default(PENDING)
+  status          SectionStatus     @default(PENDING)
   content         Json? // validated against zod schema for `type`
-  version         Int           @default(0)
-  editedByTeacher Boolean       @default(false)
+  version         Int               @default(0)
+  editedByTeacher Boolean           @default(false)
   error           String?
-  updatedAt       DateTime      @updatedAt
+  updatedAt       DateTime          @updatedAt
   revisions       SectionRevision[]
 
   @@unique([kitId, type])
@@ -298,14 +300,14 @@ model SectionRevision {
 
 /// One sitting of the formative quiz in class.
 model QuizSession {
-  id              String       @id @default(cuid())
+  id              String            @id @default(cuid())
   kitId           String
-  kit             LessonKit    @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  kit             LessonKit         @relation(fields: [kitId], references: [id], onDelete: Cascade)
   classroomId     String?
-  classroom       Classroom?   @relation(fields: [classroomId], references: [id], onDelete: SetNull)
-  method          ResultMethod @default(TALLY)
+  classroom       Classroom?        @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  method          ResultMethod      @default(TALLY)
   studentsPresent Int
-  takenAt         DateTime     @default(now())
+  takenAt         DateTime          @default(now())
   tallies         QuestionTally[]
   responses       StudentResponse[]
   misconceptions  Misconception[]
@@ -396,6 +398,48 @@ model ParentNote {
   createdAt    DateTime  @default(now())
 
   @@index([kitId])
+}
+
+/// A WORKSHEET or quiz section published for students to attempt via a public link/QR.
+/// One kit section can have several publications over time (e.g. republished with new
+/// instructions) — only `isOpen` ones accept new submissions.
+model TestPublication {
+  id                  String      @id @default(cuid())
+  kitId               String
+  kit                 LessonKit   @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  teacherId           String
+  teacher             User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  sectionType         SectionType // WORKSHEET | EXIT_QUIZ | STARTER_QUIZ
+  token               String      @unique // nanoid(12), public URL /t/[token]
+  isOpen              Boolean     @default(true)
+  gradingInstructions String? // teacher's extra instructions for AI grading of open-ended answers
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  submissions TestSubmission[]
+
+  @@index([kitId])
+  @@index([teacherId])
+}
+
+/// One student's attempt. Deterministic question types (mcq/true_false/fill_blank/match,
+/// and all quiz options) are auto-scored on submit; open-ended types (short_answer,
+/// long_answer, case_based, assertion_reason) sit ungraded until the teacher runs
+/// "Evaluate with AI".
+model TestSubmission {
+  id            String          @id @default(cuid())
+  publicationId String
+  publication   TestPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  studentName   String
+  answers       Json // { [questionId]: string }
+  perQuestion   Json? // { [questionId]: { marks: number|null, max: number, method: "auto"|"ai", feedback?: string } }
+  autoMarks     Float           @default(0)
+  aiMarks       Float?
+  maxMarks      Float           @default(0)
+  evaluatedAt   DateTime?
+  submittedAt   DateTime        @default(now())
+
+  @@index([publicationId])
 }
 
 /// Everything the dashboard counts.

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { SourcePage } from "@/lib/kit-source";
 import * as z from "zod";
 import { prisma } from "@/lib/db";
 import { getAuthedTeacher } from "@/lib/session";
@@ -33,9 +34,13 @@ const CreateKitBody = z
     scheduledFor: z.string().datetime().optional(),
     difficulty: z.enum(["easy", "medium", "hard"]).optional(),
     localContext: z.boolean().optional(),
+    grade: z.number().int().min(1).max(12).optional(),
+    subject: z.string().max(60).optional(),
+    sourceName: z.string().max(200).optional(),
+    sourcePages: z.array(SourcePage).min(1).max(400).optional(),
   })
-  .refine((b) => b.chapterId || b.topic, {
-    message: "Either chapterId or topic is required",
+  .refine((b) => b.chapterId || b.topic || b.sourcePages, {
+    message: "Pick a chapter, type a topic or upload material",
   });
 
 export async function POST(req: Request) {
@@ -58,7 +63,9 @@ export async function POST(req: Request) {
     if (!classroom) return NextResponse.json({ error: "Classroom not found" }, { status: 404 });
   }
 
-  let title = body.topic ?? "Untitled kit";
+  const sourceName = body.sourceName?.trim() || "Uploaded material";
+  let title = body.topic ?? (body.sourcePages ? sourceName : "Untitled kit");
+  if (!body.chapterId && body.grade && body.subject) title = `Class ${body.grade} ${body.subject} — ${title}`;
   if (body.chapterId) {
     const chapter = await prisma.chapter.findUnique({ where: { id: body.chapterId } });
     if (!chapter) return NextResponse.json({ error: "Chapter not found" }, { status: 404 });
@@ -82,7 +89,14 @@ export async function POST(req: Request) {
       topic: body.topic,
       teacherNote: body.teacherNote,
       scheduledFor: body.scheduledFor ? new Date(body.scheduledFor) : undefined,
-      options: { sections: optionalSections, difficulty: body.difficulty, localContext: body.localContext },
+      options: {
+        sections: optionalSections,
+        difficulty: body.difficulty,
+        localContext: body.localContext,
+        grade: body.grade,
+        subject: body.subject,
+        ...(body.sourcePages && !body.chapterId ? { source: { name: sourceName, pages: body.sourcePages } } : {}),
+      },
       sections: { create: sectionTypes.map((type) => ({ type })) },
     },
   });

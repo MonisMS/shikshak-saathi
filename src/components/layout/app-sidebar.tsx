@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { LayoutDashboard, PlusCircle, BookOpen, NotebookPen, Settings, LogOut, Sparkles } from "lucide-react";
+import { LayoutDashboard, PlusCircle, BookOpen, NotebookPen, ClipboardCheck, Settings, LogOut, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { NAV_LINKS } from "./nav-links";
@@ -13,6 +13,7 @@ const ICONS: Record<(typeof NAV_LINKS)[number]["href"], React.ComponentType<{ cl
   "/dashboard": LayoutDashboard,
   "/kits/new": PlusCircle,
   "/kits": BookOpen,
+  "/tests": ClipboardCheck,
   "/notes": NotebookPen,
   "/settings": Settings,
 };
@@ -59,6 +60,7 @@ export function AppSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               const active =
                 pathname === link.href ||
                 (link.href === "/notes" && pathname.startsWith("/notes/")) ||
+                (link.href === "/tests" && pathname.startsWith("/tests/")) ||
                 (link.href === "/kits" ? pathname.startsWith("/kits/") && pathname !== "/kits/new" : false);
               return (
                 <Link

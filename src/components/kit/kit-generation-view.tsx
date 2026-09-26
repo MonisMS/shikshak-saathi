@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { Sparkles } from "lucide-react";
 import { SectionType } from "@/generated/prisma/enums";
 import { Objectives, LessonPlan, Worksheet, Quiz, ParentNote } from "@/lib/ai/schemas";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ import { LessonPlanCard } from "./lesson-plan-card";
 import { WorksheetCard } from "./worksheet-card";
 import { QuizCard } from "./quiz-card";
 import { ParentNoteCard } from "./parent-note-card";
+import { PublishTestButton } from "./publish-test-button";
+
+const PUBLISHABLE = new Set<SectionType>([SectionType.WORKSHEET, SectionType.EXIT_QUIZ, SectionType.STARTER_QUIZ]);
 
 const SECTION_TITLES: Record<SectionType, string> = {
   OBJECTIVES: "Objectives",
@@ -30,6 +34,21 @@ const SECTION_TITLES: Record<SectionType, string> = {
   REMEDIAL: "Remedial activities",
   PARENT_NOTE: "Parent note",
 };
+
+const OPTIONAL_BLURB: Partial<Record<SectionType, string>> = {
+  WORKSHEET: "Practice questions with an answer key, built from your lesson plan.",
+  EXIT_QUIZ: "3–5 quick questions where every wrong option points to a misconception. Needed to enter results after class.",
+  PARENT_NOTE: "A short, WhatsApp-ready note for parents with tonight’s homework and one home activity.",
+};
+
+function friendlyError(error?: string): string {
+  if (!error) return "Something went wrong. Try again.";
+  if (/HTTP 40[12]|429|quota|RESOURCE_EXHAUSTED|rate.?limit|not configured|UNAVAILABLE|503/i.test(error)) {
+    return "The AI service is busy or out of quota right now. Wait a minute and press Retry.";
+  }
+  if (/must be READY/i.test(error)) return "Generate the lesson plan first, then try this section again.";
+  return error;
+}
 
 // §10.1's display order — Objectives → Plan → the parallel batch → Parent note.
 const ORDER: SectionType[] = [
@@ -100,8 +119,9 @@ function SectionBody({
 }
 
 export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title: string }) {
-  const { sections, checks, retry, regenerate, save } = useKitGeneration(kit);
+  const { sections, checks, generate, retry, regenerate, save } = useKitGeneration(kit);
   const planContent = sections[SectionType.LESSON_PLAN]?.content;
+  const planReady = sections[SectionType.LESSON_PLAN]?.status === "done";
 
   return (
     <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[280px_1fr]">
@@ -128,11 +148,25 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
                 {canEditOrRegenerate && (
                   <RegenerateControl onRegenerate={async (instruction) => { await regenerate(type, instruction); }} />
                 )}
+                {canEditOrRegenerate && PUBLISHABLE.has(type) && (
+                  <PublishTestButton kitId={kit.id} sectionType={type as "WORKSHEET" | "EXIT_QUIZ" | "STARTER_QUIZ"} />
+                )}
               </div>
             </div>
 
             <AnimatePresence mode="wait" initial={false}>
-              {state.status === "writing" || state.status === "queued" || state.status === "checking" ? (
+              {state.status === "idle" ? (
+                <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                  <div className="flex flex-col gap-4 rounded-3xl border border-dashed border-border bg-card/60 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="max-w-md text-sm text-muted-foreground">
+                      {planReady ? OPTIONAL_BLURB[type] : "Available once the lesson plan is ready — review and edit the plan first."}
+                    </p>
+                    <Button disabled={!planReady} onClick={() => generate(type)} className="shrink-0">
+                      <Sparkles /> Generate {SECTION_TITLES[type].toLowerCase()}
+                    </Button>
+                  </div>
+                </motion.div>
+              ) : state.status === "writing" || state.status === "queued" || state.status === "checking" ? (
                 <motion.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
                   <Card className="border-border/70">
                     <CardContent className="pt-6">
@@ -143,7 +177,10 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
               ) : state.status === "failed" ? (
                 <motion.div key="failed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
                   <Card className="border-border/70">
-                    <CardContent className="pt-6 text-sm text-destructive">{state.error}</CardContent>
+                    <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-destructive">{friendlyError(state.error)}</p>
+                      <Button size="sm" onClick={() => retry(type)} className="shrink-0">Retry</Button>
+                    </CardContent>
                   </Card>
                 </motion.div>
               ) : (

@@ -1,12 +1,13 @@
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Clock, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import { Loader2, Clock, CheckCircle2, XCircle, ShieldCheck, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** UI-level status (P4.2) — a superset of the DB's SectionStatus: "checking" is a
  * transient client-only phase while /validate runs after every section finishes. */
-export type SectionUiStatus = "queued" | "writing" | "checking" | "done" | "failed";
+export type SectionUiStatus = "idle" | "queued" | "writing" | "checking" | "done" | "failed";
 
 const CONFIG: Record<SectionUiStatus, { label: string; icon: React.ComponentType<{ className?: string }>; className: string }> = {
+  idle: { label: "Not generated", icon: Circle, className: "border border-dashed border-border bg-transparent text-muted-foreground" },
   queued: { label: "Queued", icon: Clock, className: "bg-muted text-muted-foreground" },
   writing: { label: "Writing…", icon: Loader2, className: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300" },
   checking: { label: "Checking…", icon: ShieldCheck, className: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
