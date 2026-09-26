@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <LanguageProvider initialLang={initialLang}>
       <div className="flex min-h-screen gap-3 p-3 md:gap-4 md:p-4 print:block print:p-0">
-        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-64 shrink-0 flex-col rounded-3xl bg-sidebar md:flex print:hidden">
+        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-64 shrink-0 flex-col overflow-y-auto overscroll-contain rounded-3xl bg-sidebar md:flex print:hidden">
           <div className="px-6 pt-7 pb-8">
             <Logo />
           </div>
