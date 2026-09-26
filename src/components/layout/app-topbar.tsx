@@ -11,10 +11,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { AppSidebarNav } from "./app-sidebar";
+import { useLanguage } from "./language-provider";
 import { cn } from "@/lib/utils";
 
 export function AppTopbar({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
+  const { lang, setLang } = useLanguage();
 
   return (
     <header className={cn("flex h-14 items-center justify-between border-b border-border bg-background px-4 md:px-6", className)}>
@@ -36,9 +38,10 @@ export function AppTopbar({ className }: { className?: string }) {
         <span className="font-semibold">शिक्षक साथी</span>
       </div>
 
-      {/* Language switch placeholder — wired to uiLanguage once i18n.ts (F29) lands */}
-      <Button variant="outline" size="sm" disabled>
-        EN / हिंदी
+      <Button variant="outline" size="sm" onClick={() => setLang(lang === "en" ? "hi" : "en")}>
+        <span className={lang === "en" ? "font-semibold" : "text-muted-foreground"}>EN</span>
+        {" / "}
+        <span className={lang === "hi" ? "font-semibold" : "text-muted-foreground"}>हिंदी</span>
       </Button>
     </header>
   );

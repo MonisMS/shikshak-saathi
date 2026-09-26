@@ -2,30 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  PlusCircle,
-  BookOpen,
-  Users,
-  Library,
-  CalendarDays,
-  Settings,
-} from "lucide-react";
+import { LayoutDashboard, PlusCircle, BookOpen, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_LINKS } from "./nav-links";
+import { useLanguage } from "./language-provider";
 
 const ICONS: Record<(typeof NAV_LINKS)[number]["href"], React.ComponentType<{ className?: string }>> = {
   "/dashboard": LayoutDashboard,
   "/kits/new": PlusCircle,
   "/kits": BookOpen,
-  "/classrooms": Users,
-  "/library": Library,
-  "/schedule": CalendarDays,
   "/settings": Settings,
 };
 
 export function AppSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { lang } = useLanguage();
 
   return (
     <nav className="flex flex-col gap-1 p-3">
@@ -45,7 +36,7 @@ export function AppSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             )}
           >
             <Icon className="size-4 shrink-0" />
-            <span>{link.label.en}</span>
+            <span>{link.label[lang]}</span>
           </Link>
         );
       })}

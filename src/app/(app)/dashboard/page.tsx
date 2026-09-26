@@ -1,20 +1,22 @@
 import Link from "next/link";
 import { requireTeacher } from "@/lib/session";
 import { getDashboardData } from "@/lib/dashboard";
-import { KitStatus } from "@/generated/prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { DashboardMic } from "@/components/dashboard/dashboard-mic";
+import { STATUS_CHIP, statusChipKey } from "@/components/kit/status-chip";
+import { cn } from "@/lib/utils";
 
-const STATUS_CHIP: Record<string, { label: string; className: string }> = {
-  DRAFT: { label: "Draft", className: "bg-muted text-muted-foreground" },
-  GENERATING: { label: "Generating", className: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" },
-  READY: { label: "Ready", className: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" },
-  FAILED: { label: "Failed", className: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300" },
-  RESULTS_IN: { label: "Results in", className: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300" },
-};
+/** A row that's a full-width link with a hover background, not a bare underlined string. */
+function KitRow({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent">
+      {children}
+    </Link>
+  );
+}
 
 export default async function DashboardPage() {
   const teacher = await requireTeacher();
@@ -69,17 +71,15 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-base">Today / Tomorrow</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-1">
             {data.todayTomorrowKits.map((k) => (
-              <div key={k.id} className="flex items-center justify-between text-sm">
-                <Link href={`/kits/${k.id}`} className="underline">
-                  {k.title}
-                </Link>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <span>{k.scheduledFor?.toLocaleDateString()}</span>
+              <KitRow key={k.id} href={`/kits/${k.id}`}>
+                <span className="min-w-0 truncate">{k.title}</span>
+                <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                  {k.scheduledFor?.toLocaleDateString()}
                   {k.fixAttached && <Badge variant="secondary">Fix attached</Badge>}
-                </div>
-              </div>
+                </span>
+              </KitRow>
             ))}
           </CardContent>
         </Card>
@@ -90,14 +90,12 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-base">Pending results</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-1">
             {data.pendingResultsKits.map((k) => (
-              <div key={k.id} className="flex items-center justify-between text-sm">
-                <span>{k.title}</span>
-                <Link href={`/kits/${k.id}/results`} className="underline">
-                  Enter results
-                </Link>
-              </div>
+              <KitRow key={k.id} href={`/kits/${k.id}/results`}>
+                <span className="min-w-0 truncate">{k.title}</span>
+                <span className="shrink-0 text-muted-foreground">Enter results →</span>
+              </KitRow>
             ))}
           </CardContent>
         </Card>
@@ -108,36 +106,36 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-base">Top misconceptions this week</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-1">
             {data.topMisconceptions.map((m) => (
-              <div key={m.id} className="flex items-center justify-between text-sm">
-                <span>{m.label}</span>
-                <Link href={`/kits/${m.kitId}/insights`} className="text-muted-foreground underline">
+              <KitRow key={m.id} href={`/kits/${m.kitId}/insights`}>
+                <span className="min-w-0 truncate">{m.label}</span>
+                <span className="shrink-0 text-muted-foreground">
                   {Math.round(m.percent * 100)}% · {m.kitTitle}
-                </Link>
-              </div>
+                </span>
+              </KitRow>
             ))}
           </CardContent>
         </Card>
       )}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between">
           <CardTitle className="text-base">Recent kits</CardTitle>
+          <Link href="/kits" className="text-sm text-muted-foreground underline">
+            View all
+          </Link>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-1">
           {data.recentKits.map((k) => {
-            const chipKey = k.hasResults ? "RESULTS_IN" : k.status;
-            const chip = STATUS_CHIP[chipKey] ?? STATUS_CHIP[KitStatus.DRAFT];
+            const chip = STATUS_CHIP[statusChipKey(k.status, k.hasResults)] ?? STATUS_CHIP.DRAFT;
             return (
-              <div key={k.id} className="flex items-center justify-between text-sm">
-                <Link href={`/kits/${k.id}`} className="underline">
-                  {k.title}
-                </Link>
-                <Badge variant="secondary" className={chip.className}>
+              <KitRow key={k.id} href={`/kits/${k.id}`}>
+                <span className="min-w-0 truncate">{k.title}</span>
+                <Badge variant="secondary" className={cn("shrink-0", chip.className)}>
                   {chip.label}
                 </Badge>
-              </div>
+              </KitRow>
             );
           })}
         </CardContent>
