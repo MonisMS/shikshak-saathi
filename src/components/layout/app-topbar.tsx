@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { AppSidebarNav, Logo } from "./app-sidebar";
 import { useLanguage } from "./language-provider";
 import { cn } from "@/lib/utils";
+import { InstallAppButton } from "@/components/pwa/pwa";
 
 export function AppTopbar({ className, name, email }: { className?: string; name: string; email: string }) {
   const [open, setOpen] = useState(false);
@@ -50,6 +51,7 @@ export function AppTopbar({ className, name, email }: { className?: string; name
       </form>
 
       <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
+        <InstallAppButton />
         <button
           type="button"
           onClick={() => setLang(lang === "en" ? "hi" : "en")}

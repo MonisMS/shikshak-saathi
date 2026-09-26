@@ -3,6 +3,7 @@ import { AppSidebarNav, Logo, SidebarPromo } from "@/components/layout/app-sideb
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { LanguageProvider } from "@/components/layout/language-provider";
 import { requireTeacher } from "@/lib/session";
+import { OfflineBanner } from "@/components/pwa/pwa";
 import type { Lang } from "@/lib/i18n";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </aside>
         <div className="flex min-w-0 flex-1 flex-col gap-3 md:gap-4">
           <AppTopbar className="print:hidden" name={teacher.name} email={teacher.email} />
+          <OfflineBanner />
           <main className="flex-1 rounded-3xl p-1 md:p-2 print:p-0">{children}</main>
         </div>
       </div>

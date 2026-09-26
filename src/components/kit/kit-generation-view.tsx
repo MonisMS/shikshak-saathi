@@ -11,6 +11,7 @@ import { FadeIn } from "@/components/motion/fade-in";
 import { useKitGeneration, type KitForGeneration } from "./use-kit-generation";
 import { SectionStatusPill } from "./section-status-pill";
 import { RegenerateControl } from "./regenerate-control";
+import { SaveOfflineButton } from "@/components/pwa/pwa";
 import { CheckerPanel } from "./checker-panel";
 import { isQuizStale } from "./quiz-freshness";
 import { ObjectivesCard } from "./objectives-card";
@@ -130,7 +131,10 @@ export function KitGenerationView({ kit, title }: { kit: KitForGeneration; title
       </div>
 
       <div className="min-w-0 space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <SaveOfflineButton kitId={kit.id} title={title} />
+        </div>
         {ORDER.filter((type) => type in sections).map((type, index) => {
         const state = sections[type];
         const canEditOrRegenerate = state.status === "done";
