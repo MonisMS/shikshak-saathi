@@ -191,9 +191,19 @@ export function TestDetailView({ test, submissions }: { test: TestMeta; submissi
             {submissions.length} response{submissions.length === 1 ? "" : "s"}
           </h2>
           {submissions.length > 0 && (
-            <a href={`/api/tests/${test.id}/export`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-              Export CSV
-            </a>
+            <div className="flex gap-2">
+              <a href={`/api/tests/${test.id}/export`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                Export CSV
+              </a>
+              <a
+                href={`/tests/${test.id}/print`}
+                target="_blank"
+                rel="noopener"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Export PDF
+              </a>
+            </div>
           )}
         </div>
 

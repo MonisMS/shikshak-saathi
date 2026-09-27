@@ -23,7 +23,7 @@ export function AppTopbar({ className, name, email }: { className?: string; name
         <SheetTrigger className="md:hidden" render={<Button variant="ghost" size="icon" aria-label="Open menu" />}>
           <Menu className="size-5" />
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0">
+        <SheetContent side="left" className="w-72 overflow-y-auto p-0">
           <SheetHeader className="px-6 py-5">
             <SheetTitle render={<div />}>
               <Logo />

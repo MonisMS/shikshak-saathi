@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
-import { CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -43,7 +42,7 @@ export function TestAttemptForm(props: Props) {
   const [studentName, setStudentName] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
+  const router = useRouter();
 
   function setAnswer(id: string, value: string) {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -60,11 +59,11 @@ export function TestAttemptForm(props: Props) {
       });
       const data: unknown = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string })?.error ?? "Could not submit");
-      setDone((data as { score?: string }).score ?? "submitted");
+      // replace, not push: Back from the result page mustn't land on a re-submittable form.
+      const score = (data as { score?: string }).score;
+      router.replace(`/t/${props.token}/submitted${score ? `?score=${encodeURIComponent(score)}` : ""}`);
     } catch (err) {
-      setDone(null);
       alert(err instanceof Error ? err.message : "Could not submit");
-    } finally {
       setSubmitting(false);
     }
   }
@@ -73,24 +72,6 @@ export function TestAttemptForm(props: Props) {
     return (
       <Centered>
         <p className="text-sm text-muted-foreground">This test is closed and no longer accepting responses.</p>
-      </Centered>
-    );
-  }
-
-  if (done !== null) {
-    return (
-      <Centered>
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-6 py-10 text-center dark:border-emerald-900 dark:bg-emerald-950/40"
-        >
-          <CheckCircle2 className="size-10 text-emerald-600 dark:text-emerald-400" />
-          <p className="text-base font-medium text-emerald-900 dark:text-emerald-200">
-            {props.kind === "quiz" ? `Submitted! Score: ${done}` : "Submitted — your teacher will grade this soon."}
-          </p>
-          <p className="text-sm text-emerald-800/80 dark:text-emerald-300/80">You can close this page now.</p>
-        </motion.div>
       </Centered>
     );
   }
