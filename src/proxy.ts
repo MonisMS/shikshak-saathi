@@ -6,7 +6,7 @@ import { getSessionCookie } from "better-auth/cookies";
 // own guidance: proxy matchers can silently miss routes, so always re-verify).
 export function proxy(request: NextRequest) {
   if (!getSessionCookie(request)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/api/demo/login", request.url));
   }
   return NextResponse.next();
 }

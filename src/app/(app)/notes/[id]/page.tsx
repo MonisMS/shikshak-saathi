@@ -6,7 +6,7 @@ import { NoteView } from "@/components/notes/note-view";
 
 export default async function NotePage(props: PageProps<"/notes/[id]">) {
   const { id } = await props.params;
-  // requireTeacher() redirects to /login on no session — must not be try/catch-wrapped.
+  // requireTeacher() redirects to the demo entry route on no session — must not be try/catch-wrapped.
   const teacher = await requireTeacher();
 
   let note;

@@ -85,7 +85,7 @@ function Heading({ children, hi }: { children: React.ReactNode; hi: string }) {
 
 export default async function Home() {
   // Silenced, not deleted: the app now starts from /dashboard (which itself sends
-  // signed-out visitors to /login). Remove this line to bring the landing page back.
+  // signed-out visitors to the demo entry route). Remove this line to bring the landing page back.
   redirect("/dashboard");
 
   const signedIn = Boolean(getSessionCookie(await headers()));
@@ -121,8 +121,8 @@ export default async function Home() {
               </Link>
             ) : (
               <>
-                <Link href="/login" className="rounded-full px-3 py-2 text-(--lp-chalk-3) transition-colors hover:text-(--lp-chalk)">
-                  Log in
+                <Link href="/api/demo/login" className="rounded-full px-3 py-2 text-(--lp-chalk-3) transition-colors hover:text-(--lp-chalk)">
+                  Open dashboard
                 </Link>
                 <Link href="/signup" className="ml-1 rounded-full border border-(--lp-line-strong) px-4 py-2 text-(--lp-chalk) transition-colors hover:border-(--lp-chalk-3)">
                   Sign up

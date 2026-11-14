@@ -7,7 +7,7 @@ export default async function KitPage(props: PageProps<"/kits/[id]">) {
   const { id } = await props.params;
   const autostart = (await props.searchParams).autostart === "1";
 
-  // requireTeacher() redirects to /login on no session — must not be try/catch-wrapped
+  // requireTeacher() redirects to the demo entry route on no session — must not be try/catch-wrapped
   // (Next's docs: redirect() throws and must propagate).
   const teacher = await requireTeacher();
 

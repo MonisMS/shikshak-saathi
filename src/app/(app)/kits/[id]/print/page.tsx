@@ -17,7 +17,7 @@ export default async function PrintPage(props: PageProps<"/kits/[id]/print">) {
   const doc = rawDoc ?? "all";
   const onepage = (Array.isArray(sp.onepage) ? sp.onepage[0] : sp.onepage) === "1";
 
-  // requireTeacher() redirects to /login on no session — must not be try/catch-wrapped.
+  // requireTeacher() redirects to the demo entry route on no session — must not be try/catch-wrapped.
   const teacher = await requireTeacher();
 
   let kit;

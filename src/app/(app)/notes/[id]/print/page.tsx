@@ -32,7 +32,7 @@ export default async function NotePrintPage(props: PageProps<"/notes/[id]/print"
   const { id } = await props.params;
   const include = parseInclude((await props.searchParams).include);
 
-  // requireTeacher() redirects to /login on no session — must not be try/catch-wrapped.
+  // requireTeacher() redirects to the demo entry route on no session — must not be try/catch-wrapped.
   const teacher = await requireTeacher();
 
   let note;

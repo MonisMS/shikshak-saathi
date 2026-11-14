@@ -47,7 +47,7 @@ export function AppSidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   async function logout() {
     clearOfflineKits();
     await authClient.signOut();
-    router.push("/login");
+    router.push("/api/demo/login");
     router.refresh();
   }
 

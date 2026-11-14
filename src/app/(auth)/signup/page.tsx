@@ -57,9 +57,9 @@ export default function SignupPage() {
           </form>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/login" className="underline">
-              Log in
+            Want to explore first?{" "}
+            <Link href="/api/demo/login" className="underline">
+              Open demo
             </Link>
           </p>
         </CardContent>

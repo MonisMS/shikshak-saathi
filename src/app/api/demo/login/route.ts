@@ -9,3 +9,22 @@ export async function POST() {
     asResponse: true,
   });
 }
+
+// Open the app directly without showing a login page. Keep existing sessions.
+export async function GET(request: Request) {
+  const session = await auth.api.getSession({ headers: request.headers });
+  const destination = new URL("/dashboard", request.url);
+  if (session) {
+    return Response.redirect(destination, 303);
+  }
+
+  const response = await POST();
+  if (!response.ok) return response;
+
+  const headers = new Headers(response.headers);
+  headers.delete("content-type");
+  headers.delete("content-length");
+  headers.set("location", destination.toString());
+  headers.set("cache-control", "no-store");
+  return new Response(null, { status: 303, headers });
+}
